@@ -88,15 +88,34 @@ def score_episode(log: dict, truth: dict, cost_cfg: dict,
     # the one in force when it spent budget on a recovery action. That is where the
     # operational cost of a misdiagnosis is actually incurred, so it is what the cost
     # matrix should score. Belief drift after the incident is resolved is not a new
-    # claim. Falls back to the last confident classification if it never acted.
+    # claim.
+    #
+    # Which action is "the commitment" is decided the same way first_t decided which
+    # classification was real, above: a belief only counts if it is not a single-tick
+    # flicker (it must survive into the NEXT recorded tick). Walk the actions in order
+    # (skipping declare_link_lost, the refusal path scored separately) and anchor to
+    # the first one whose concurrent belief passes that test. A cheap early hedge --
+    # e.g. bumping TX power on a guess -- is abandoned by the very next tick and so
+    # never qualifies; the same call anchors correctly when that belief instead holds
+    # (e.g. bumping TX power because it really is fading, and the fix works). This
+    # was a real defect: anchoring to literally the first action scored an agent that
+    # hedged for one tick, self-corrected, then diagnosed and mitigated a reactive
+    # jammer correctly for the rest of the episode as a total miss. Falls back to the
+    # last confident classification overall if no action's belief ever holds.
     confident = [r for r in trace if r["p"] >= th["act_confidence"]]
     acts = [a for a in log.get("actions", []) if a["fn"] != "declare_link_lost"]
     final = None
-    if acts:
-        t_act = acts[0]["t"]
-        prior = [r for r in confident if r["t"] <= t_act]
-        if prior:
-            final = prior[-1]["top"]
+    for a in acts:
+        prior = [r for r in confident if r["t"] <= a["t"]]
+        if not prior:
+            continue
+        anchor = prior[-1]
+        i = trace.index(anchor)
+        sustained = (i + 1 < len(trace) and trace[i + 1]["top"] == anchor["top"]
+                     and trace[i + 1]["p"] >= th["act_confidence"])
+        if sustained:
+            final = anchor["top"]
+            break
     if final is None:
         final = confident[-1]["top"] if confident else None
     classification_ok = (final == true_cause)
