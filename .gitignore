@@ -14,3 +14,9 @@ Thumbs.db
 # Large local artifacts
 _scratch/
 *.tar.gz
+
+# Generated LLM cache: content-addressed by prompt hash, mechanically
+# regenerable, and redundant with what each DecisionRecord already stores
+# inline (harness/trace.py keeps prompt+response per step) -- not source.
+data/llm_cache/
+data/manual_llm_trace.jsonl
