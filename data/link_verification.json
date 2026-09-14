@@ -3,7 +3,7 @@
   "link": "L1",
   "what": "corpus -> scenarios build",
   "pass": true,
-  "detail": "54 scenarios, 9 families  [2.8s]"
+  "detail": "54 scenarios, 9 families  [2.2s]"
  },
  {
   "link": "L3",
@@ -15,19 +15,19 @@
   "link": "L5",
   "what": "oracle teacher -> controller -> refsim",
   "pass": true,
-  "detail": "5/5 correct  [0.8s]"
+  "detail": "5/5 correct  [0.5s]"
  },
  {
   "link": "L8",
   "what": "student -> controller -> refsim",
   "pass": true,
-  "detail": "6/6 correct, bundle 265.7 KB  [1.0s]"
+  "detail": "6/6 correct, bundle 265.7 KB  [1.1s]"
  },
  {
   "link": "L9",
   "what": "safety envelope (action masking + failsafe)",
   "pass": true,
-  "detail": "AGENT SAFETY SUITE: 14 passed, 0 failed  [1.3s]"
+  "detail": "AGENT SAFETY SUITE: 14 passed, 0 failed  [1.8s]"
  },
  {
   "link": "L13",
