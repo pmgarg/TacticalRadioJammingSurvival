@@ -1,0 +1,13 @@
+stateDiagram-v2
+    [*] --> Nominal
+    Nominal --> Anomaly: detector fires
+    Anomaly --> Hypotheses: build posterior over causes
+    Hypotheses --> Test: belief uncertain, budget remains
+    Hypotheses --> Act: one cause confident
+    Test --> Hypotheses: fold result into posterior
+    Act --> Verify: watch recovery window
+    Verify --> Nominal: link restored
+    Verify --> Hypotheses: no recovery, budget remains
+    Hypotheses --> Failsafe: refusal criteria met
+    Verify --> Failsafe: budget or timeout exhausted
+    Failsafe --> [*]: declare_link_lost plus RTH

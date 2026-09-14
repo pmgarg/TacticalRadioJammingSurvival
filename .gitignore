@@ -1,0 +1,16 @@
+# Local-only design workspace — never pushed
+personal/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+
+# Large local artifacts
+_scratch/
+*.tar.gz

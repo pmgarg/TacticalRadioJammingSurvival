@@ -1,0 +1,51 @@
+graph TB
+    subgraph CAP["capstone/ (new code for this project)"]
+        BRIDGE["ns-3 bridge<br/>run_sim / read_result wrappers"]
+        JCAPS["Jamming capabilities<br/>Sense / Diagnose / Act contracts"]
+        JPRED["Jamming predicates<br/>(score_contract style)"]
+        MUT["Mutation corpus<br/>+ detection-rate sweep"]
+    end
+
+    subgraph DATA["config/ + data/ (reviewer-owned files)"]
+        TASKS["tasks.jsonl<br/>(id, scenario config, predicate ref)"]
+        MUTS["mutations.jsonl"]
+        FEAT["features.toml<br/>(S17_PROFILE=capstone)"]
+    end
+
+    subgraph S17["S17Code platform -- capstone profile (pinned submodule)"]
+        HARNESS["proofs/harness.py<br/>run task, collect checks, write record"]
+        PLAN["planner.py<br/>propose next frontier"]
+        REG["capabilities.py<br/>registry + arg-contract validation"]
+        EXEC["coding/exec.py<br/>no-shell, allowlisted, sandboxed runner"]
+        JOURNAL["core/live_graph/<br/>run journal (the tape)"]
+        EVALS["evals/ tasks.py + pairs.py"]
+    end
+
+    subgraph GATED["gated off by flag, CI-isolated (Appendix D)"]
+        MEM["core/memory + faiss"]
+        A2A["core/a2a + grpc"]
+        ECON["economics"]
+        CHAN["events / channels / voice"]
+    end
+
+    GLC["glc_v5 gateway (pinned submodule)<br/>ClaudeCLIProvider -- TEACHER routing only"]
+    NS3["ns-3 (vendored, pinned)<br/>OLSRv1 mesh + jammers + ground-truth oracle"]
+    RECORDS["Raw run records<br/>JSONL on disk (written before scoring)"]
+    SCORE["Scorecard + mutation-detection rate<br/>+ teacher/student/baseline comparison"]
+
+    FEAT --> S17
+    TASKS --> HARNESS
+    MUTS --> MUT
+    HARNESS --> PLAN --> REG
+    JCAPS --> REG
+    REG --> EXEC --> BRIDGE --> NS3
+    PLAN -. teacher role only .-> GLC
+    NS3 --> JOURNAL --> RECORDS
+    HARNESS --> RECORDS
+    RECORDS --> JPRED
+    RECORDS --> MUT
+    JPRED --> SCORE
+    MUT --> SCORE
+    EVALS -. loaders + sweep .-> JPRED
+    EVALS -. loaders + sweep .-> MUT
+    S17 -. no import (CI contract) .-> GATED

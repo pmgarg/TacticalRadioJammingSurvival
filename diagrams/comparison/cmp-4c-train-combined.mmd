@@ -1,0 +1,9 @@
+flowchart TB
+    C1["Scenario generator, ns-3,<br/>obs + ground truth"] --> C2["Diagnosis dataset (free GT labels)"]
+    C1 --> C3["Teacher episodes, raw trajectories"]
+    C3 --> C4["Outcome scorer +<br/>counterfactual action search (a-star = argmin J)"]
+    C4 --> C5["Verified experience store (A / B / C / D tiers)"]
+    C5 --> C6["Filtered Behaviour Cloning<br/>(optional IQL / CQL ablation)"]
+    C2 --> C7["GRU / MLP / tree diagnosis<br/>+ calibration + OOD gate"]
+    C6 --> C8["INT8 student bundle"]
+    C7 --> C8

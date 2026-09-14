@@ -1,0 +1,9 @@
+flowchart TB
+    D1["ns-3 episodes"] --> D2["Belief head on FREE ns-3 labels<br/>(primary classification target)"]
+    D1 --> D3["Teacher: self-consistency k=5<br/>+ rejection sampling (test-selection only)"]
+    D2 --> D4["cost-sensitive loss (cost_matrix.yaml)"]
+    D3 --> D4
+    D4 --> D5["DAgger x2 (closed-loop student rollouts)"]
+    D5 --> D6["conformal abstention"]
+    D6 --> D7["int8 export + equivalence gate"]
+    D7 --> D8["student bundle"]

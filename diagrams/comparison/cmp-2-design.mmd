@@ -1,0 +1,25 @@
+flowchart TB
+    subgraph DRONE["ON DRONE -- student bundle under 512 KB, under 20 ms"]
+        direction TB
+        L1["L1 PERCEPT (fixed-point; one C99 lib, three call sites; norm.h frozen)<br/>ring buffers to EWMA / CUSUM / run-length histograms<br/>S1..S10 passive discriminative stats to feature vector<br/>plus CUSUM anomaly gate"]
+        L2["L2 AGENT (~1 Hz)<br/>classifier to belief (8 + unknown)<br/>test planner (expected info-gain per cost)<br/>policy head (validated lookup + learned corrections)"]
+        SAFE["SAFETY ENVELOPE<br/>logit masking, then monotone escalation ladder, then dead-man failsafe.c<br/>(runs even if inference hangs)"]
+    end
+    L0["L0 RADIO (classical, unchanged): MAC / PHY / ARQ / OLSRv1"]
+    subgraph OFF["OFFLINE (lab)"]
+        direction TB
+        TEA["Teacher (LLM)<br/>self-consistency k=5 + rejection sampling (test-selection only)"]
+        DST["Distillation<br/>belief head on FREE ns-3 labels (about 70 percent fewer teacher calls)<br/>cost-sensitive loss, then DAgger x2, then conformal abstention"]
+        EXP["int8 export, then int8-equivalence gate (argmax agree at least 99.5 percent)"]
+    end
+    NS3["ns-3 world + oracle + FIDELITY GATE (fading marginals match barrage)"]
+    VER["Verifier: predicates + FPR_acted + censored latency + paired-bootstrap CI"]
+
+    L0 -->|"1 detect (CUSUM)"| L1
+    L1 -->|"2 features + S1..S10"| L2
+    L2 -->|"3 belief + test or action"| SAFE
+    SAFE -->|"4 masked action"| L0
+    NS3 --- L0
+    NS3 --> TEA --> DST --> EXP
+    EXP -->|"flash bundle"| L1
+    NS3 --> VER

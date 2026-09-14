@@ -1,0 +1,16 @@
+sequenceDiagram
+    participant C as Controller
+    participant M as Model
+    participant R as Radio loop
+    R->>C: PDR zero everywhere, noise floor high everywhere
+    C->>M: observation
+    M-->>C: run spectrum_scan three times
+    C->>R: spectrum_scan over 6 s
+    R-->>C: all 8 channels above threshold, persistently
+    C->>R: neighbor_probe on 3 channels
+    R-->>C: no peer heard, noise high on each
+    C->>R: check LoRa fallback band
+    R-->>C: also jammed, no reachable peer
+    C->>C: refusal criteria met, force declare_link_lost
+    C->>R: execute return-to-home on last known position
+    Note over C,R: bounded steps, no infinite hopping
