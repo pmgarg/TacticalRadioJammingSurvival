@@ -8,8 +8,10 @@ CAUSES = ["barrage", "spot", "reactive", "sweep",
           "fading", "node_loss", "congestion", "hidden_term"]
 UNKNOWN = "unknown"
 
-DIAGNOSE = ["spectrum_scan", "listen_test", "transmit_probe", "neighbor_probe",
-            "silent_listen", "load_test", "channel_hop_probe", "mobility_test"]
+# listen_test and transmit_probe were removed in contract 1.2.0 -- no simulator
+# implemented them, so they cost budget and returned nothing (DESIGN v2.0 A13).
+DIAGNOSE = ["spectrum_scan", "neighbor_probe", "silent_listen", "load_test",
+            "channel_hop_probe", "mobility_test"]
 ACTIONS = ["no_op", "set_tx_power", "reroute", "change_tdma_slot",
            "hop_channel", "fallback_to_lora", "move", "declare_link_lost"]
 ALL_CALLS = DIAGNOSE + ACTIONS
@@ -24,6 +26,14 @@ class Decision:
     unrecoverable: float = 0.0
     why: str = ""
     expect: str = ""            # the observable change this action predicts
+    declared: str | None = None
+    """The cause the agent COMMITS to, which is not the same as argmax(belief).
+
+    Under an asymmetric cost matrix the rational declaration is the minimum-expected-cost
+    class, and that can differ from the most probable one -- that is the entire point of
+    having the matrix. `belief` stays the honest posterior; `declared` is the decision.
+    Agents that do not separate the two leave this None and the verifier falls back to
+    argmax, so nothing downstream breaks."""
 
     @property
     def top(self) -> str:

@@ -1,0 +1,13 @@
+family              n        v7        v8   delta
+barrage           234   100.0%   100.0%    +0.0%
+congestion        259    95.0%    91.5%    -3.5%
+fading            258   100.0%   100.0%    +0.0%
+hidden_term       366    66.1%    56.8%    -9.3%
+node_loss         332   100.0%   100.0%    +0.0%
+reactive          292    54.8%    59.2%    +4.5%
+refusal           607   100.0%   100.0%    +0.0%
+spot              291    84.2%    83.8%    -0.3%
+sweep             405    87.9%     0.0%   -87.9% <-- HELD OUT
+
+OVERALL          3044    88.0%    75.3%   -12.7%
+FP fading->jam           0.000    0.000

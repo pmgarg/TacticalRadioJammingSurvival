@@ -51,10 +51,21 @@ def expected_cost_decision(proba: np.ndarray, classes: list[str]) -> np.ndarray:
 
 
 def conformal_threshold(proba: np.ndarray, y_true: np.ndarray, classes: list[str],
-                        target_err: float = 0.10) -> float:
-    """Smallest confidence cut whose retained set has error <= target_err."""
-    conf = proba.max(axis=1)
-    pred = np.array(classes)[proba.argmax(axis=1)]
+                        target_err: float = 0.10, cost_rule: bool = True) -> float:
+    """Smallest confidence cut whose retained set has error <= target_err.
+
+    AUDIT F4.4: this used to calibrate on `max(proba)` with an argmax prediction, while
+    `agent/student.py` abstains on the probability of the MINIMUM-EXPECTED-COST class.
+    Two different statistics, so the <=target_err guarantee did not transfer to the
+    deployed rule. It now calibrates on exactly the pair inference uses.
+    """
+    if cost_rule:
+        pred = expected_cost_decision(proba, classes)
+        idx = np.array([classes.index(p) if p in classes else 0 for p in pred])
+        conf = proba[np.arange(len(proba)), idx]
+    else:
+        conf = proba.max(axis=1)
+        pred = np.array(classes)[proba.argmax(axis=1)]
     correct = (pred == y_true)
     for q in np.linspace(0.0, 0.95, 96):
         keep = conf >= q

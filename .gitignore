@@ -1,0 +1,13 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Session staging artifacts (tarballs used to move code in/out of build containers)
+_scratch/
+
+# Pre-filter trace copies kept only as local evidence of the sweep-family leak.
+# The filtered corpora (train.jsonl / val.jsonl / test.jsonl) are the shipping data.
+*.leaked.jsonl
+
+# Local run scratch
+.DS_Store

@@ -89,7 +89,15 @@ check("declares link lost within deadline", ok_t,
       f"declared={log.declared_lost_t} onset={onset} deadline={deadline}s")
 check("does not hop more than the cap while refusing",
       log.hops_consumed <= maxhops, f"hops={log.hops_consumed}")
-check("survived == True (correct refusal counts as survival)", log.survived)
+# AUDIT F4.2: `survived` is no longer computed by the controller (it is a truth-dependent
+# metric, so only the verifier may compute it). Ask the verifier.
+import yaml as _yaml
+from verify.verifier import score_episode as _score
+_cost = _yaml.safe_load(open(os.path.join(HERE, "contract", "cost_matrix.yaml")))
+_s = _score(log.to_dict(), {"cause": "barrage", "onset_t": log.attack_onset_t or 0.0,
+                            "recoverable": False}, _cost, CONTRACT, "refusal")
+check("survived == True (correct refusal counts as survival)", _s.survived,
+      f"verifier says survived={_s.survived}, refusal_ok={_s.refusal_ok}")
 
 print("\n=== 4. Never hop on fading (the expensive error) ===")
 hops_on_fading = 0
@@ -100,18 +108,25 @@ for k in range(6):
 check("zero channel hops across 6 fading episodes",
       hops_on_fading == 0, f"total hops={hops_on_fading}")
 
-print("\n=== 5. Escalation ladder is monotone ===")
+print("\n=== 5. Escalation depth is recorded, and costly actions stay in budget ===")
+# AUDIT F4.8: this used to assert `ctrl.rung >= 0`, which is true for every possible run
+# because `rung` starts at 0 and is only ever raised. `rung` is a RECORDED statistic, not
+# an enforced constraint (see controller.py), so assert the constraint that IS enforced.
 sim = RefSim(FAMILIES["barrage"]())
 ctrl = Controller(sim, FAMILIES["barrage"](), BaselineAgent(), CONTRACT)
 ctrl.run()
-check("ladder rung never decreased", ctrl.rung >= 0, f"final rung={ctrl.rung} ({LADDER[ctrl.rung]})")
+check("deepest rung reached is a real ladder action",
+      0 <= ctrl.rung < len(LADDER), f"rung={ctrl.rung} ({LADDER[ctrl.rung]})")
+check("costly actions never exceeded the budget",
+      ctrl.used["costly"] <= CONTRACT["budgets"]["max_costly_actions"],
+      f"used={ctrl.used['costly']} budget={CONTRACT['budgets']['max_costly_actions']}")
 
 print("\n=== 6. Contract integrity ===")
 check("every ladder action exists in the contract",
       all(a in CONTRACT["act"] for a in LADDER),
       str([a for a in LADDER if a not in CONTRACT["act"]]))
-check("cost matrix penalises fading->jamming hardest",
-      True)  # numeric check below
+# AUDIT F4.8: this was a hardcoded `check(..., True)`. The real numeric assertion is
+# three lines below, so the placeholder is simply removed.
 import yaml
 cm = yaml.safe_load(open(os.path.join(HERE, "contract", "cost_matrix.yaml")))
 row = cm["matrix"]["fading"]

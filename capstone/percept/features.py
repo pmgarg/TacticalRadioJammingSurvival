@@ -16,11 +16,12 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-from .norm import (N_FEATURES, RSSI_OFFSET, RSSI_SCALE, NOISE_OFFSET, NOISE_SCALE,
+from .norm import (N_FEATURES, GATE_WARMUP_S, RSSI_OFFSET, RSSI_SCALE, NOISE_OFFSET, NOISE_SCALE,
                    SINR_OFFSET, SINR_SCALE, DBM_DELTA_SCALE, RATE_SCALE,
                    SPEED_SCALE, DIST_SCALE, SLOPE_SCALE, PERCEPT_HZ, TAU_FAST,
                    TAU_SLOW, TAU_BASE, CORR_WINDOW_S, FADE_PDR_THRESH,
                    CUSUM_K, CUSUM_H, JAM_ENERGY_DBM, DEFER_SCALE_MS,
+                   NOMINAL_NOISE_DBM, HOT_MARGIN_DB, HOT_PEAK_MARGIN_DB,
                    TX_SHADOW_TAU_MS, clamp, nz, unit)
 from .ring import Ring, Ewma, Cusum, RunLength, pearson
 
@@ -155,8 +156,16 @@ class FeatureExtractor:
         """Record a spectrum scan result (called when a scan action completes)."""
         self.last_scan = scan
         if scan.channels:
+            # Only record a hot channel when it is MEANINGFULLY hotter than the rest.
+            # Under a barrage jammer every channel sits at the same level, so the argmax
+            # is decided by noise and jitters from scan to scan -- which would read as a
+            # moving hot channel, i.e. a sweep. Requiring a margin over the median makes
+            # the sweep signature specific, and lets two scans be enough instead of three.
             hot = max(scan.channels, key=lambda c: c.noise_dbm)
-            self.hot_channel_hist.append(hot.ch)
+            lv = sorted(c.noise_dbm for c in scan.channels)
+            med = lv[len(lv) // 2]
+            if (hot.noise_dbm - med) >= HOT_PEAK_MARGIN_DB:
+                self.hot_channel_hist.append(hot.ch)
             if len(self.hot_channel_hist) > 12:
                 self.hot_channel_hist.pop(0)
 
@@ -233,10 +242,45 @@ class FeatureExtractor:
                     (o.noise_dbm - self.noise_base.value) > 6.0)
         retry_up = retry_mean > 0.35
         zero_rx = hb_now > 3.0
-        if (fired or noise_up or retry_up or zero_rx) and self.onset_t is None:
+
+        # S4' as a GATE trigger, not just a feature.
+        #
+        # Measured on the fixed simulator: a correctly-modelled reactive jammer drops
+        # delivery by only 0.994 -> 0.946 -- about 5 points -- while barrage and spot
+        # collapse it to zero. That is not a weak jammer, it is what the brief describes:
+        # "delivery fine, but everything is a retransmission". A gate that watches PDR
+        # therefore never fires, the agent is never allowed to decide, and the episode
+        # ends with no diagnosis at all -- which is exactly what happened to the LLM
+        # teacher on ns-3 reactive: 26 steps, 0 decisions, declared=None.
+        #
+        # The loss is not absent, it is CONCENTRATED right after our own transmissions.
+        # S4' measures precisely that, and on the fixed world it reads +0.43 for reactive
+        # against <=+0.27 for every other family. So it belongs in the gate.
+        self._gate_shadow_exp = getattr(self, "_gate_shadow_exp", 0) + o.shadow_expected
+        self._gate_shadow_miss = getattr(self, "_gate_shadow_miss", 0) + o.shadow_missed
+        self._gate_silent_exp = getattr(self, "_gate_silent_exp", 0) + o.silent_expected
+        self._gate_silent_miss = getattr(self, "_gate_silent_miss", 0) + o.silent_missed
+        shadow_up = False
+        if self._gate_shadow_exp >= 10 and self._gate_silent_exp >= 10:
+            shadow_up = ((self._gate_shadow_miss / self._gate_shadow_exp)
+                         - (self._gate_silent_miss / self._gate_silent_exp)) > 0.20
+
+        # WARMUP. Every trigger above is "this departs from our baseline", and for the
+        # first couple of seconds there is no baseline to depart from: a handful of frames
+        # have been exchanged, so retry_mean and heartbeat_age are noisy and large. Without
+        # this guard the gate fired at t=1.0 s on EVERY family, including fading and a
+        # perfectly healthy link -- which makes detection latency meaningless and hands the
+        # agent a decision before it has seen anything. Corpus onsets are >= 14 s, so a
+        # short warmup costs no real detection latency.
+        self._gate_samples = getattr(self, "_gate_samples", 0) + 1
+        warm = (self._gate_samples * dt) >= GATE_WARMUP_S and self.pdr_base.init
+
+        if warm and (fired or noise_up or retry_up or zero_rx or shadow_up) \
+                and self.onset_t is None:
             self.onset_t, self.onset_pos = o.t, o.pos
             self._gate_reason = ("pdr" if fired else "noise" if noise_up
-                                 else "retry" if retry_up else "zero_rx")
+                                 else "retry" if retry_up else "zero_rx" if zero_rx
+                                 else "tx_shadow")
         r_ewma = self.retry_ewma.update(retry_mean, dt)
         retries_per_success = retry_mean / max(1e-3, pdr_mean)
         self.max_consec_fail = max(self.max_consec_fail, o.consecutive_tx_fail)
@@ -250,7 +294,16 @@ class FeatureExtractor:
             chs = self.last_scan.channels
             noises = [c.noise_dbm for c in chs]
             nm = sum(noises) / len(noises)
-            bad = sum(1 for c in chs if c.noise_dbm > JAM_ENERGY_DBM) / len(chs)
+            # "Hot" must be measured against OUR OWN quiet floor, not a hard-coded dBm.
+            # A fixed JAM_ENERGY_DBM is a knife edge: a barrage jammer that parks the
+            # whole band at exactly the threshold makes bad_frac flip between 0.0 and 1.0
+            # on a 1 dB change in its power, which is the difference between "all clear"
+            # and "everything jammed". Referencing the pre-onset floor (which the ESP32
+            # also has, from its boot-time noise_floor reading) removes the cliff and
+            # keeps the absolute threshold only as a floor for pathological baselines.
+            ref = self.noise_base.value if self.noise_base.init else NOMINAL_NOISE_DBM
+            hot_dbm = min(JAM_ENERGY_DBM, ref + HOT_MARGIN_DB)
+            bad = sum(1 for c in chs if c.noise_dbm >= hot_dbm) / len(chs)
             spread = math.sqrt(sum((x - nm) ** 2 for x in noises) / len(noises))
             cur = next((c for c in chs if c.ch == o.channel), None)
             rank = (sorted(noises).index(cur.noise_dbm) / max(1, len(chs) - 1)
@@ -264,7 +317,7 @@ class FeatureExtractor:
         # sweep signature: does the hot channel keep moving between scans? (S5)
         hh = self.hot_channel_hist
         periodicity = (sum(1 for i in range(1, len(hh)) if hh[i] != hh[i - 1]) /
-                       max(1, len(hh) - 1)) if len(hh) >= 3 else 0.0
+                       max(1, len(hh) - 1)) if len(hh) >= 2 else 0.0
 
         # ---------------- temporal ---------------- #
         self.fade_runs.update(pdr_mean, dt)                                    # S7

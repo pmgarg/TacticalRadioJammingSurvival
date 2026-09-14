@@ -1,10 +1,18 @@
-"""Three-way evaluation: baseline vs teacher vs student, on the held-out test split."""
+"""Three-way evaluation on the held-out test split.
+
+    baseline   hand-written rules -- the control
+    oracle*    PRIVILEGED: constructed with the true cause. A CEILING, not a competitor.
+               It is marked with a star everywhere it is printed, because reporting its
+               100% as an agent result is the error DESIGN v2.0 A5b forbids. The teacher
+               the brief asks for is agent/llm_teacher.py, which sees no ground truth.
+    student    the distilled artefact that would actually fly
+"""
 from __future__ import annotations
 import argparse, glob, json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import yaml
 from agent.baseline import BaselineAgent
-from agent.teacher import TeacherAgent
+from agent.teacher import OracleLabeller
 from agent.student import StudentAgent
 from agent.controller import Controller
 from scenario.schema import load_scenario
@@ -23,8 +31,8 @@ def run_split(files, which, bundle=None):
         sc = load_scenario(fp)
         if which == "baseline":
             ag = BaselineAgent()
-        elif which == "teacher":
-            ag = TeacherAgent(sc.truth.cause, sc.truth.recoverable)
+        elif which == "oracle*":
+            ag = OracleLabeller(sc.truth.cause, sc.truth.recoverable)
         else:
             ag = stu
         log = Controller(RefSim(sc), sc, ag, CONTRACT).run()
@@ -43,7 +51,7 @@ def main():
     files = sorted(glob.glob(os.path.join(a.corpus, a.split, "*.yaml")))
     print(f"evaluating {len(files)} held-out scenarios ({a.split})\n")
     rows = {}
-    for which in ("baseline", "teacher", "student"):
+    for which in ("baseline", "oracle*", "student"):
         sc = run_split(files, which, a.bundle)
         agg = aggregate(sc)
         g = gates(agg, {"fp_max": 0.05})
@@ -72,7 +80,7 @@ def main():
         print(f"{w:<12} FP gate={'PASS' if g['false_positive_gate']['pass'] else 'FAIL'}  "
               f"refusal gate={'PASS' if g['refusal_gate']['pass'] else 'FAIL'}")
     print("\nper-family classification accuracy")
-    fams = sorted(rows["teacher"][0]["by_family"])
+    fams = sorted(rows["oracle*"][0]["by_family"])
     print(f"{'family':<14}" + "".join(f"{w:>12}" for w in rows))
     for fam in fams:
         print(f"{fam:<14}" + "".join(

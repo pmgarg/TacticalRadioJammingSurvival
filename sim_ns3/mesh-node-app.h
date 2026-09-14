@@ -80,6 +80,13 @@ class MeshNodeApp : public Application
     void SetTxEnabled(bool e) { m_txEnabled = e; }
     void SetDataRate(double kbps) { m_dataKbps = kbps; }
 
+    /** AUDIT F3d: active window of the mission DATA stream (flow.0.start /
+     *  flow.0.stop in the scenario config). Beacons are deliberately not affected --
+     *  they are the measurement plane and must run for the whole episode. Must be
+     *  called before the application starts. Without it the data stream behaves as
+     *  before: it begins ~50 ms after StartApplication() and runs to StopTime. */
+    void SetDataWindow(Time start, Time stop);
+
     /** Per-source receive counters (index -> count), reset by the sampler. */
     const std::map<uint32_t, uint32_t>& RxCounts() const { return m_rxCount; }
     /** Cumulative, never reset -- each consumer diffs against its own snapshot. */
@@ -121,6 +128,7 @@ class MeshNodeApp : public Application
     void StopApplication() override;
     void SendBeacon();
     void SendData();
+    void StopData();
     void HandleRead(Ptr<Socket> s);
 
     Ptr<Socket> m_txSock;
@@ -144,6 +152,11 @@ class MeshNodeApp : public Application
     uint32_t m_dataRx{0};
     EventId m_beaconEv;
     EventId m_dataEv;
+    EventId m_dataStopEv;
+    // AUDIT F3d: mission-flow window; m_hasDataWindow == false keeps the old behaviour
+    Time m_dataStart{Seconds(0)};
+    Time m_dataStop{Seconds(0)};
+    bool m_hasDataWindow{false};
     std::map<uint32_t, uint32_t> m_rxCount;
     std::map<uint32_t, uint32_t> m_rxTotal;
     std::map<uint32_t, double> m_rxRssi;                 // PHY-measured, per peer

@@ -1,0 +1,13 @@
+family              n   v8 (old world)   v9 (fixed world)
+barrage           234          100.0%            100.0%
+congestion        259           66.4%             57.1%
+fading            258          100.0%             98.8%
+hidden_term       366           25.4%             43.2%
+node_loss         332           62.3%             89.2%
+reactive          292           50.7%             99.0%
+refusal           607           99.8%            100.0%
+spot              291           67.7%             89.3%
+sweep            2463            0.0%              0.0% <-- HELD OUT
+
+OVERALL          5102           37.5%             44.0%
+FP fading->jam                  0.000             0.012

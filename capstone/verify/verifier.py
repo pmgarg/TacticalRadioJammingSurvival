@@ -68,13 +68,20 @@ def score_episode(log: dict, truth: dict, cost_cfg: dict,
     # decisions, or be acted upon (the agent committed to it). An agent that
     # diagnoses correctly, fixes the problem and stops talking about it must not be
     # scored as "never detected".
+    # What the agent CLAIMED. An agent that separates its posterior from its
+    # minimum-expected-cost decision records the decision in `declared`; one that does not
+    # leaves it absent and argmax is used. Scoring argmax while advertising a cost rule was
+    # AUDIT F4.3 -- every headline number reflected a rule the code never applied.
+    def claim(row):
+        return row.get("declared") or row["top"]
+
     act_times = [a["t"] for a in log.get("actions", [])]
     first_t = None
     for i, row in enumerate(trace):
-        if row["top"] != true_cause or row["p"] < th["act_confidence"]:
+        if claim(row) != true_cause or row["p"] < th["act_confidence"]:
             continue
         sustained = (i + 1 < len(trace)
-                     and trace[i + 1]["top"] == true_cause
+                     and claim(trace[i + 1]) == true_cause
                      and trace[i + 1]["p"] >= th["act_confidence"])
         acted = any(row["t"] <= at <= row["t"] + 2.0 for at in act_times)
         if sustained or acted:
@@ -96,13 +103,13 @@ def score_episode(log: dict, truth: dict, cost_cfg: dict,
         t_act = acts[0]["t"]
         prior = [r for r in confident if r["t"] <= t_act]
         if prior:
-            final = prior[-1]["top"]
+            final = claim(prior[-1])
     if final is None:
-        final = confident[-1]["top"] if confident else None
+        final = claim(confident[-1]) if confident else None
     classification_ok = (final == true_cause)
 
     # ---- the expensive error ----
-    believed_jam = any(r["top"] in JAMMING and r["p"] >= th["act_confidence"] for r in trace)
+    believed_jam = any(claim(r) in JAMMING and r["p"] >= th["act_confidence"] for r in trace)
     hopped = any(a["fn"] in ("hop_channel", "channel_hop_probe")
                  for a in log.get("actions", []))
     fp = (true_cause == "fading") and believed_jam
@@ -127,7 +134,13 @@ def score_episode(log: dict, truth: dict, cost_cfg: dict,
             and log.get("hops_consumed", 0) <= b["max_channel_hops"]
         )
 
-    survived = bool(log.get("survived", False))
+    # AUDIT F4.2: survival is a TRUTH-DEPENDENT metric (declaring the link lost is the
+    # correct outcome only when the episode really was unrecoverable), so it is computed
+    # here -- the one component allowed to see ground truth -- rather than read back from
+    # a field the controller filled in from `sc.truth`.
+    recovered = log.get("recovery_t") is not None
+    declared_lost = log.get("declared_lost_t") is not None
+    survived = bool(recovered or (declared_lost and not recoverable))
     ec = _cost(cost_cfg["matrix"], cost_cfg["order"], true_cause, final,
                cost_cfg.get("abstain_cost", 2.0))
 
@@ -202,16 +215,25 @@ def confusion(scores: list[EpisodeScore]) -> dict:
 
 
 def gates(agg: dict, targets: dict) -> dict:
-    """The two pass/fail gates that can fail an otherwise good agent (design §8.2)."""
+    """The two pass/fail gates that can fail an otherwise good agent (design §8.2).
+
+    A gate with nothing to measure is N/A, not FAIL. Running one spot episode does not
+    fail the fading false-positive gate -- there was no fading episode in it. Reporting
+    that as FAIL trains the reader to ignore the gates, which is the opposite of the point.
+    Both gates are only meaningful over a corpus that contains the relevant families.
+    """
     g = {}
     fp = agg.get("fp_fading_acted")
+    fp_max = targets.get("fp_max", 0.05)
     g["false_positive_gate"] = {
-        "value": fp, "target": targets.get("fp_max", 0.05),
-        "pass": (fp is not None and fp <= targets.get("fp_max", 0.05)),
+        "value": fp, "target": fp_max, "applicable": fp is not None,
+        "pass": (fp is None or fp <= fp_max),
+        "note": "" if fp is not None else "no fading episodes in this run",
     }
     rg = agg.get("refusal_gate_pass")
     g["refusal_gate"] = {
-        "value": rg, "target": 1.0,
-        "pass": (rg is not None and rg >= 1.0),
+        "value": rg, "target": 1.0, "applicable": rg is not None,
+        "pass": (rg is None or rg >= 1.0),
+        "note": "" if rg is not None else "no unrecoverable episodes in this run",
     }
     return g

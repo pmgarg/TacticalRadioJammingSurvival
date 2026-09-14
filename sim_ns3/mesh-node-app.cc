@@ -50,6 +50,14 @@ MeshNodeApp::Setup(uint32_t myIdx,
 }
 
 void
+MeshNodeApp::SetDataWindow(Time start, Time stop)
+{
+    m_dataStart = start;
+    m_dataStop = stop;
+    m_hasDataWindow = true;
+}
+
+void
 MeshNodeApp::SetTdma(uint8_t slot, uint8_t nSlots, Time frame)
 {
     m_slot = slot;
@@ -109,8 +117,37 @@ MeshNodeApp::StartApplication()
     m_beaconEv = Simulator::Schedule(first, &MeshNodeApp::SendBeacon, this);
     if (m_hasData && m_dataKbps > 0)
     {
-        m_dataEv = Simulator::Schedule(MilliSeconds(50), &MeshNodeApp::SendData, this);
+        /* AUDIT F3d: honour flow.0.start / flow.0.stop. export_ns3.py has always
+         * written them, but the C++ ignored them and the mission flow started
+         * ~50 ms after the app did (t ~ 0.55 s). In hidden_terminal.yaml flow.0 has
+         * start_s: 18.0, so a 1200 kbps interferer ran from the start of the episode
+         * and destroyed the pre-onset baseline. Background flows (index >= 1) already
+         * honoured their window via OnOffHelper Start()/Stop(). */
+        Time now = Simulator::Now();
+        Time dfirst = MilliSeconds(50);   // not `first`: that is the beacon's offset
+        if (m_hasDataWindow && m_dataStart > now + dfirst)
+        {
+            dfirst = m_dataStart - now;
+        }
+        // a window that closes before it opens means "no data at all"
+        if (!m_hasDataWindow || m_dataStop > now + dfirst)
+        {
+            m_dataEv = Simulator::Schedule(dfirst, &MeshNodeApp::SendData, this);
+            if (m_hasDataWindow)
+            {
+                m_dataStopEv =
+                    Simulator::Schedule(m_dataStop - now, &MeshNodeApp::StopData, this);
+            }
+        }
     }
+}
+
+void
+MeshNodeApp::StopData()
+{
+    // AUDIT F3d: end of the flow.0 window -- stop the data stream only. Beacons keep
+    // going so per-link PDR stays measurable for the rest of the episode.
+    Simulator::Cancel(m_dataEv);
 }
 
 void
@@ -118,6 +155,7 @@ MeshNodeApp::StopApplication()
 {
     Simulator::Cancel(m_beaconEv);
     Simulator::Cancel(m_dataEv);
+    Simulator::Cancel(m_dataStopEv);
     if (m_rxSock)
     {
         m_rxSock->Close();
@@ -219,10 +257,8 @@ MeshNodeApp::HandleRead(Ptr<Socket> s)
         p->CopyData(buf, sizeof(MeshPktHdr));
         MeshPktHdr h;
         std::memcpy(&h, buf, sizeof(h));
-        m_rxCount[h.srcIdx]++;
-        m_rxTotal[h.srcIdx]++;
         double now = Simulator::Now().GetSeconds();
-        m_lastHeard[h.srcIdx] = now;
+        m_lastHeard[h.srcIdx] = now;   // liveness: any frame from this peer counts
         if (h.kind == 1)
         {
             m_dataRx++;
@@ -230,6 +266,14 @@ MeshNodeApp::HandleRead(Ptr<Socket> s)
 
         if (h.kind == 0)
         {
+            /* AUDIT F3c: these two counters are BEACON counters -- every consumer
+             * divides them by (beaconHz * window) to get per-link PDR. They used to be
+             * incremented unconditionally, before the kind test, so data packets were
+             * counted as beacons: on the flow source the counts exceeded the beacon
+             * expectation and PDR clamped to 1.0 no matter how bad the link was. Count
+             * beacons only; data delivery is tracked separately by m_dataRx. */
+            m_rxCount[h.srcIdx]++;
+            m_rxTotal[h.srcIdx]++;
             // ---- TX-shadow bucketing (TELEMETRY.md §1) ----
             // Beacons are periodic, so a sequence gap tells us exactly WHEN each
             // missing beacon was due. Classify every due beacon by whether it fell

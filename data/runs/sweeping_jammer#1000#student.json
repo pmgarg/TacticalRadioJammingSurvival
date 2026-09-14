@@ -1,0 +1,919 @@
+{
+  "run_id": "sweeping_jammer#1000#student",
+  "task_id": "sweeping_jammer",
+  "agent": "student",
+  "family": "sweep",
+  "config": {
+    "scenario": "sweeping_jammer",
+    "seed": 1000,
+    "n_channels": 8,
+    "channel": 6,
+    "nodes": 6,
+    "duration_s": 60.0
+  },
+  "contract_version": "1.2.0",
+  "episode_log": {
+    "episode_id": "sweeping_jammer#1000",
+    "scenario": "sweeping_jammer",
+    "agent": "student",
+    "attack_onset_t": 18.099999999999987,
+    "first_correct_classification_t": null,
+    "classification_trace": [
+      {
+        "t": 19.0,
+        "top": "barrage",
+        "p": 1.0,
+        "declared": "barrage",
+        "belief": {
+          "barrage": 1.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 20.0,
+        "top": "congestion",
+        "p": 1.0,
+        "declared": "congestion",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 1.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 21.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 22.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 23.0,
+        "top": "spot",
+        "p": 0.996,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.004,
+          "spot": 0.996,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 24.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": null,
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 25.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 26.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 27.0,
+        "top": "spot",
+        "p": 0.887,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.005,
+          "spot": 0.887,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.107,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 28.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 29.0,
+        "top": "barrage",
+        "p": 0.5,
+        "declared": "barrage",
+        "belief": {
+          "barrage": 0.5,
+          "spot": 0.5,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 30.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": null,
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 31.0,
+        "top": "spot",
+        "p": 0.994,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.994,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.006,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 32.0,
+        "top": "spot",
+        "p": 0.781,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.219,
+          "spot": 0.781,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 33.0,
+        "top": "barrage",
+        "p": 0.788,
+        "declared": "barrage",
+        "belief": {
+          "barrage": 0.788,
+          "spot": 0.212,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 34.0,
+        "top": "spot",
+        "p": 0.986,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.986,
+          "reactive": 0.007,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.008,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 35.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 36.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": null,
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 37.0,
+        "top": "congestion",
+        "p": 0.632,
+        "declared": "congestion",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.367,
+          "reactive": 0.001,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.632,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 38.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 39.0,
+        "top": "spot",
+        "p": 0.997,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.003,
+          "spot": 0.997,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      }
+    ],
+    "tests_run": [
+      {
+        "t": 19.0,
+        "test": "spectrum_scan",
+        "args": {
+          "dwell_ms": 20
+        },
+        "why": "student: barrage (p=1.00); all channels hot; trade rate for a link"
+      }
+    ],
+    "actions": [
+      {
+        "t": 20.0,
+        "fn": "hop_channel",
+        "args": {
+          "channel": 1
+        },
+        "why": "student: congestion (p=1.00); back off and separate transmitters",
+        "expect": "PDR recovers to >=0.8 of baseline within 3 s",
+        "budget_after": 6
+      },
+      {
+        "t": 21.0,
+        "fn": "set_tx_power",
+        "args": {
+          "dbm": 20
+        },
+        "why": "student: spot (p=1.00); a clean channel exists; move to it",
+        "expect": "PDR recovers to >=0.8 of baseline within 3 s",
+        "budget_after": 5
+      },
+      {
+        "t": 39.0,
+        "fn": "declare_link_lost",
+        "args": {},
+        "why": "student: spot (p=1.00); a clean channel exists; move to it",
+        "expect": "PDR recovers to >=0.8 of baseline within 3 s",
+        "budget_after": 5
+      }
+    ],
+    "recovery_t": null,
+    "packets_lost": 157.4,
+    "actions_consumed": 1,
+    "hops_consumed": 1,
+    "tests_before_correct_classification": null,
+    "recovered": false,
+    "survived": null,
+    "declared_jamming": true,
+    "declared_lost_t": 39.0,
+    "end_reason": "agent_declared",
+    "pdr_series": [
+      [
+        0.0,
+        0.988
+      ],
+      [
+        0.5,
+        0.988
+      ],
+      [
+        1.0,
+        0.988
+      ],
+      [
+        1.5,
+        0.988
+      ],
+      [
+        2.0,
+        0.988
+      ],
+      [
+        2.5,
+        0.988
+      ],
+      [
+        3.0,
+        0.988
+      ],
+      [
+        3.5,
+        0.988
+      ],
+      [
+        4.0,
+        0.988
+      ],
+      [
+        4.5,
+        0.988
+      ],
+      [
+        5.0,
+        0.988
+      ],
+      [
+        5.5,
+        0.988
+      ],
+      [
+        6.0,
+        0.988
+      ],
+      [
+        6.5,
+        0.988
+      ],
+      [
+        7.0,
+        0.988
+      ],
+      [
+        7.5,
+        0.988
+      ],
+      [
+        8.0,
+        0.988
+      ],
+      [
+        8.5,
+        0.988
+      ],
+      [
+        9.0,
+        0.988
+      ],
+      [
+        9.5,
+        0.988
+      ],
+      [
+        10.0,
+        0.988
+      ],
+      [
+        10.5,
+        0.988
+      ],
+      [
+        11.0,
+        0.988
+      ],
+      [
+        11.5,
+        0.988
+      ],
+      [
+        12.0,
+        0.988
+      ],
+      [
+        12.5,
+        0.988
+      ],
+      [
+        13.0,
+        0.988
+      ],
+      [
+        13.5,
+        0.988
+      ],
+      [
+        14.0,
+        0.988
+      ],
+      [
+        14.5,
+        0.988
+      ],
+      [
+        15.0,
+        0.988
+      ],
+      [
+        15.5,
+        0.988
+      ],
+      [
+        16.0,
+        0.988
+      ],
+      [
+        16.5,
+        0.988
+      ],
+      [
+        17.0,
+        0.988
+      ],
+      [
+        17.5,
+        0.988
+      ],
+      [
+        18.0,
+        0.988
+      ],
+      [
+        18.5,
+        0.048
+      ],
+      [
+        19.0,
+        0.247
+      ],
+      [
+        19.5,
+        0.987
+      ],
+      [
+        20.0,
+        0.793
+      ],
+      [
+        20.5,
+        0.793
+      ],
+      [
+        21.0,
+        0.982
+      ],
+      [
+        21.5,
+        0.987
+      ],
+      [
+        22.0,
+        0.988
+      ],
+      [
+        22.5,
+        0.016
+      ],
+      [
+        23.0,
+        0.048
+      ],
+      [
+        23.5,
+        0.247
+      ],
+      [
+        24.0,
+        0.982
+      ],
+      [
+        24.5,
+        0.987
+      ],
+      [
+        25.0,
+        0.988
+      ],
+      [
+        25.5,
+        0.988
+      ],
+      [
+        26.0,
+        0.048
+      ],
+      [
+        26.5,
+        0.247
+      ],
+      [
+        27.0,
+        0.793
+      ],
+      [
+        27.5,
+        0.982
+      ],
+      [
+        28.0,
+        0.988
+      ],
+      [
+        28.5,
+        0.988
+      ],
+      [
+        29.0,
+        0.016
+      ],
+      [
+        29.5,
+        0.048
+      ],
+      [
+        30.0,
+        0.793
+      ],
+      [
+        30.5,
+        0.982
+      ],
+      [
+        31.0,
+        0.987
+      ],
+      [
+        31.5,
+        0.988
+      ],
+      [
+        32.0,
+        0.016
+      ],
+      [
+        32.5,
+        0.048
+      ],
+      [
+        33.0,
+        0.247
+      ],
+      [
+        33.5,
+        0.793
+      ],
+      [
+        34.0,
+        0.987
+      ],
+      [
+        34.5,
+        0.988
+      ],
+      [
+        35.0,
+        0.988
+      ],
+      [
+        35.5,
+        0.016
+      ],
+      [
+        36.0,
+        0.247
+      ],
+      [
+        36.5,
+        0.793
+      ],
+      [
+        37.0,
+        0.982
+      ],
+      [
+        37.5,
+        0.987
+      ],
+      [
+        38.0,
+        0.988
+      ],
+      [
+        38.5,
+        0.016
+      ],
+      [
+        39.0,
+        0.048
+      ],
+      [
+        39.5,
+        0.247
+      ],
+      [
+        40.0,
+        0.982
+      ],
+      [
+        40.5,
+        0.987
+      ],
+      [
+        41.0,
+        0.988
+      ],
+      [
+        41.5,
+        0.988
+      ],
+      [
+        42.0,
+        0.048
+      ],
+      [
+        42.5,
+        0.247
+      ],
+      [
+        43.0,
+        0.793
+      ],
+      [
+        43.5,
+        0.982
+      ],
+      [
+        44.0,
+        0.988
+      ],
+      [
+        44.5,
+        0.988
+      ],
+      [
+        45.0,
+        0.016
+      ],
+      [
+        45.5,
+        0.048
+      ],
+      [
+        46.0,
+        0.793
+      ],
+      [
+        46.5,
+        0.982
+      ],
+      [
+        47.0,
+        0.987
+      ],
+      [
+        47.5,
+        0.988
+      ],
+      [
+        48.0,
+        0.016
+      ],
+      [
+        48.5,
+        0.048
+      ],
+      [
+        49.0,
+        0.247
+      ],
+      [
+        49.5,
+        0.793
+      ],
+      [
+        50.0,
+        0.987
+      ],
+      [
+        50.5,
+        0.988
+      ],
+      [
+        51.0,
+        0.988
+      ],
+      [
+        51.5,
+        0.016
+      ],
+      [
+        52.0,
+        0.247
+      ],
+      [
+        52.5,
+        0.793
+      ],
+      [
+        53.0,
+        0.982
+      ],
+      [
+        53.5,
+        0.987
+      ],
+      [
+        54.0,
+        0.988
+      ],
+      [
+        54.5,
+        0.016
+      ],
+      [
+        55.0,
+        0.048
+      ],
+      [
+        55.5,
+        0.247
+      ],
+      [
+        56.0,
+        0.982
+      ],
+      [
+        56.5,
+        0.987
+      ],
+      [
+        57.0,
+        0.988
+      ],
+      [
+        57.5,
+        0.988
+      ],
+      [
+        58.0,
+        0.048
+      ],
+      [
+        58.5,
+        0.247
+      ],
+      [
+        59.0,
+        0.793
+      ],
+      [
+        59.5,
+        0.982
+      ]
+    ]
+  },
+  "ground_truth": {
+    "cause": "sweep",
+    "onset_t": 18.0,
+    "recoverable": true,
+    "notes": ""
+  }
+}

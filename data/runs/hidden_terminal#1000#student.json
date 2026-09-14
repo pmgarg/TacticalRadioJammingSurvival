@@ -1,0 +1,680 @@
+{
+  "run_id": "hidden_terminal#1000#student",
+  "task_id": "hidden_terminal",
+  "agent": "student",
+  "family": "hidden_term",
+  "config": {
+    "scenario": "hidden_terminal",
+    "seed": 1000,
+    "n_channels": 8,
+    "channel": 6,
+    "nodes": 6,
+    "duration_s": 60.0
+  },
+  "contract_version": "1.2.0",
+  "episode_log": {
+    "episode_id": "hidden_terminal#1000",
+    "scenario": "hidden_terminal",
+    "agent": "student",
+    "attack_onset_t": 18.099999999999987,
+    "first_correct_classification_t": null,
+    "classification_trace": [
+      {
+        "t": 19.0,
+        "top": "hidden_term",
+        "p": 1.0,
+        "declared": "hidden_term",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 1.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 20.0,
+        "top": "hidden_term",
+        "p": 1.0,
+        "declared": "hidden_term",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 1.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 21.0,
+        "top": "hidden_term",
+        "p": 1.0,
+        "declared": "hidden_term",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 1.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 22.0,
+        "top": "hidden_term",
+        "p": 1.0,
+        "declared": "hidden_term",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 1.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 23.0,
+        "top": "hidden_term",
+        "p": 1.0,
+        "declared": "hidden_term",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 1.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 24.0,
+        "top": "hidden_term",
+        "p": 1.0,
+        "declared": "hidden_term",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 1.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 25.0,
+        "top": "hidden_term",
+        "p": 1.0,
+        "declared": "hidden_term",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 1.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 26.0,
+        "top": "hidden_term",
+        "p": 1.0,
+        "declared": "hidden_term",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 1.0
+        },
+        "unrecoverable": 0.0
+      }
+    ],
+    "tests_run": [
+      {
+        "t": 19.0,
+        "test": "load_test",
+        "args": {
+          "factor": 0.5
+        },
+        "why": "student: hidden_term (p=1.00); separate the colliding transmitters"
+      }
+    ],
+    "actions": [
+      {
+        "t": 22.0,
+        "fn": "change_tdma_slot",
+        "args": {
+          "slot": 3
+        },
+        "why": "student: hidden_term (p=1.00); separate the colliding transmitters",
+        "expect": "PDR recovers to >=0.8 of baseline within 3 s",
+        "budget_after": 6
+      }
+    ],
+    "recovery_t": 26.0,
+    "packets_lost": 34.1,
+    "actions_consumed": 0,
+    "hops_consumed": 0,
+    "tests_before_correct_classification": null,
+    "recovered": true,
+    "survived": null,
+    "declared_jamming": false,
+    "declared_lost_t": null,
+    "end_reason": "recovered",
+    "pdr_series": [
+      [
+        0.0,
+        0.974
+      ],
+      [
+        0.5,
+        0.974
+      ],
+      [
+        1.0,
+        0.974
+      ],
+      [
+        1.5,
+        0.974
+      ],
+      [
+        2.0,
+        0.974
+      ],
+      [
+        2.5,
+        0.974
+      ],
+      [
+        3.0,
+        0.974
+      ],
+      [
+        3.5,
+        0.974
+      ],
+      [
+        4.0,
+        0.974
+      ],
+      [
+        4.5,
+        0.974
+      ],
+      [
+        5.0,
+        0.974
+      ],
+      [
+        5.5,
+        0.974
+      ],
+      [
+        6.0,
+        0.974
+      ],
+      [
+        6.5,
+        0.974
+      ],
+      [
+        7.0,
+        0.974
+      ],
+      [
+        7.5,
+        0.974
+      ],
+      [
+        8.0,
+        0.974
+      ],
+      [
+        8.5,
+        0.974
+      ],
+      [
+        9.0,
+        0.974
+      ],
+      [
+        9.5,
+        0.974
+      ],
+      [
+        10.0,
+        0.974
+      ],
+      [
+        10.5,
+        0.974
+      ],
+      [
+        11.0,
+        0.974
+      ],
+      [
+        11.5,
+        0.974
+      ],
+      [
+        12.0,
+        0.974
+      ],
+      [
+        12.5,
+        0.974
+      ],
+      [
+        13.0,
+        0.974
+      ],
+      [
+        13.5,
+        0.974
+      ],
+      [
+        14.0,
+        0.974
+      ],
+      [
+        14.5,
+        0.974
+      ],
+      [
+        15.0,
+        0.974
+      ],
+      [
+        15.5,
+        0.974
+      ],
+      [
+        16.0,
+        0.974
+      ],
+      [
+        16.5,
+        0.974
+      ],
+      [
+        17.0,
+        0.974
+      ],
+      [
+        17.5,
+        0.974
+      ],
+      [
+        18.0,
+        0.974
+      ],
+      [
+        18.5,
+        0.226
+      ],
+      [
+        19.0,
+        0.226
+      ],
+      [
+        19.5,
+        0.6
+      ],
+      [
+        20.0,
+        0.6
+      ],
+      [
+        20.5,
+        0.6
+      ],
+      [
+        21.0,
+        0.6
+      ],
+      [
+        21.5,
+        0.6
+      ],
+      [
+        22.0,
+        0.6
+      ],
+      [
+        22.5,
+        0.974
+      ],
+      [
+        23.0,
+        0.974
+      ],
+      [
+        23.5,
+        0.974
+      ],
+      [
+        24.0,
+        0.974
+      ],
+      [
+        24.5,
+        0.974
+      ],
+      [
+        25.0,
+        0.974
+      ],
+      [
+        25.5,
+        0.974
+      ],
+      [
+        26.0,
+        0.974
+      ],
+      [
+        26.5,
+        0.974
+      ],
+      [
+        27.0,
+        0.974
+      ],
+      [
+        27.5,
+        0.974
+      ],
+      [
+        28.0,
+        0.974
+      ],
+      [
+        28.5,
+        0.974
+      ],
+      [
+        29.0,
+        0.974
+      ],
+      [
+        29.5,
+        0.974
+      ],
+      [
+        30.0,
+        0.974
+      ],
+      [
+        30.5,
+        0.974
+      ],
+      [
+        31.0,
+        0.974
+      ],
+      [
+        31.5,
+        0.974
+      ],
+      [
+        32.0,
+        0.974
+      ],
+      [
+        32.5,
+        0.974
+      ],
+      [
+        33.0,
+        0.974
+      ],
+      [
+        33.5,
+        0.974
+      ],
+      [
+        34.0,
+        0.974
+      ],
+      [
+        34.5,
+        0.974
+      ],
+      [
+        35.0,
+        0.974
+      ],
+      [
+        35.5,
+        0.974
+      ],
+      [
+        36.0,
+        0.974
+      ],
+      [
+        36.5,
+        0.974
+      ],
+      [
+        37.0,
+        0.974
+      ],
+      [
+        37.5,
+        0.974
+      ],
+      [
+        38.0,
+        0.974
+      ],
+      [
+        38.5,
+        0.974
+      ],
+      [
+        39.0,
+        0.974
+      ],
+      [
+        39.5,
+        0.974
+      ],
+      [
+        40.0,
+        0.974
+      ],
+      [
+        40.5,
+        0.974
+      ],
+      [
+        41.0,
+        0.974
+      ],
+      [
+        41.5,
+        0.974
+      ],
+      [
+        42.0,
+        0.974
+      ],
+      [
+        42.5,
+        0.974
+      ],
+      [
+        43.0,
+        0.974
+      ],
+      [
+        43.5,
+        0.974
+      ],
+      [
+        44.0,
+        0.974
+      ],
+      [
+        44.5,
+        0.974
+      ],
+      [
+        45.0,
+        0.974
+      ],
+      [
+        45.5,
+        0.974
+      ],
+      [
+        46.0,
+        0.974
+      ],
+      [
+        46.5,
+        0.974
+      ],
+      [
+        47.0,
+        0.974
+      ],
+      [
+        47.5,
+        0.974
+      ],
+      [
+        48.0,
+        0.974
+      ],
+      [
+        48.5,
+        0.974
+      ],
+      [
+        49.0,
+        0.974
+      ],
+      [
+        49.5,
+        0.974
+      ],
+      [
+        50.0,
+        0.974
+      ],
+      [
+        50.5,
+        0.974
+      ],
+      [
+        51.0,
+        0.974
+      ],
+      [
+        51.5,
+        0.974
+      ],
+      [
+        52.0,
+        0.974
+      ],
+      [
+        52.5,
+        0.974
+      ],
+      [
+        53.0,
+        0.974
+      ],
+      [
+        53.5,
+        0.974
+      ],
+      [
+        54.0,
+        0.974
+      ],
+      [
+        54.5,
+        0.974
+      ],
+      [
+        55.0,
+        0.974
+      ],
+      [
+        55.5,
+        0.974
+      ],
+      [
+        56.0,
+        0.974
+      ],
+      [
+        56.5,
+        0.974
+      ],
+      [
+        57.0,
+        0.974
+      ],
+      [
+        57.5,
+        0.974
+      ],
+      [
+        58.0,
+        0.974
+      ],
+      [
+        58.5,
+        0.974
+      ],
+      [
+        59.0,
+        0.974
+      ],
+      [
+        59.5,
+        0.974
+      ]
+    ]
+  },
+  "ground_truth": {
+    "cause": "hidden_term",
+    "onset_t": 18.0,
+    "recoverable": true,
+    "notes": ""
+  }
+}

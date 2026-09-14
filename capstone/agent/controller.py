@@ -4,7 +4,10 @@ The agent controller — the deterministic wrapper around whatever model is driv
 It owns everything that must NOT be learned (design §7.6):
   1. action masking      - unavailable calls are removed before the agent chooses,
                            so "hop forever" is impossible by construction
-  2. escalation ladder   - monotone; once a rung is spent you cannot go back up
+  2. escalation depth    - RECORDED, not enforced. `self.rung` is the deepest rung the
+                           episode reached; it is a reported statistic. An earlier
+                           docstring called it a monotone constraint, but nothing read it
+                           (AUDIT F4.8). Masking and the budget are the real constraints.
   3. dead-man failsafe   - forces declare_link_lost() even if the model hangs,
                            is wrong, or never asks for it
 
@@ -19,7 +22,20 @@ import os
 from dataclasses import dataclass, field
 
 from percept.features import FeatureExtractor
-from .api import Agent, Context, Decision, CAUSES, UNKNOWN
+from .api import Agent, Context, Decision, CAUSES, UNKNOWN, DIAGNOSE
+
+# A reciprocal report older than this is stale -- fall back to the forward direction alone
+# rather than acting on what a peer said about us ten seconds ago.
+REVERSE_REPORT_MAX_AGE_S = 3.0
+
+
+def _link_health(l) -> float:
+    """Usable delivery on a link: the worse of the two directions. See DECISION D9."""
+    rev = getattr(l, "pdr_reverse", None)
+    age = getattr(l, "report_age_s", 999.0)
+    if rev is None or age > REVERSE_REPORT_MAX_AGE_S:
+        return l.pdr
+    return min(l.pdr, float(rev))
 
 # escalation ladder: index = how far down we have gone
 LADDER = ["no_op", "set_tx_power", "change_tdma_slot", "reroute",
@@ -45,7 +61,8 @@ class EpisodeLog:
     actions_consumed: int = 0
     hops_consumed: int = 0
     tests_before_correct_classification: int | None = None
-    survived: bool = False
+    recovered: bool = False
+    survived: bool | None = None      # computed by the verifier, not here
     declared_jamming: bool = False
     declared_lost_t: float | None = None
     end_reason: str = ""
@@ -68,7 +85,7 @@ class Controller:
         self.reset()
 
     def reset(self) -> None:
-        self.used = {"hops": 0, "scans": 0, "silent": 0, "moves": 0, "costly": 0}
+        self.used = {"hops": 0, "scans": 0, "silent": 0, "moves": 0, "costly": 0, "lora": 0}
         self.tried: dict[tuple[str, str], float] = {}   # (hypothesis, call) -> t
         self.rung = 0
         self.last_scan_t = -1e9
@@ -84,8 +101,11 @@ class Controller:
     # ------------------------------------------------------------------ #
     def _available(self, t: float, no_link_for: float) -> list[str]:
         """The action mask. This is what makes the refusal structural."""
+        # listen_test / transmit_probe removed in contract 1.2.0 -- no simulator
+        # implemented them (tests/test_contract_effects.py), so they cost budget and
+        # returned nothing. DESIGN v2.0 A13.
         av = ["no_op", "set_tx_power", "reroute", "change_tdma_slot",
-              "listen_test", "transmit_probe", "neighbor_probe", "load_test"]
+              "neighbor_probe", "load_test"]
         if self.used["scans"] < self.b["max_spectrum_scans"] and \
            (t - self.last_scan_t) >= self.b["min_scan_interval_s"]:
             av.append("spectrum_scan")
@@ -123,11 +143,21 @@ class Controller:
             return "recovery_timeout"
         if self.used["costly"] >= self.b["max_costly_actions"] and no_link_for > 3.0:
             return "budget_exhausted"
-        # all channels scanned bad + no reachable peer + lora gone => unrecoverable
+        # All channels scanned bad + no reachable peer + no escape => unrecoverable.
+        #
+        # AUDIT F4.2: this used to read `sc.lora_jammed`, a ground-truth field set together
+        # with `recoverable=False` for the refusal family -- so the failsafe that produces
+        # the refusal-gate pass was conditioned on the refusal label. The agent could not
+        # see it, but the controller ships with the agent, so it was truth leaking into the
+        # deployed artefact. The escape test is now purely what the drone can know:
+        # either it has no fallback radio at all, or it already spent the fallback and the
+        # link did not come back. That is also better behaviour -- it must TRY the escape
+        # before declaring there is none.
         scan = ctx.last_scan
         if scan and scan.channels:
             allbad = all(c.noise_dbm > self.th["jam_energy_dbm"] for c in scan.channels)
-            if allbad and no_link_for > 2.0 and (self.sc.lora_jammed or not self.sc.lora_available):
+            no_escape = (not self.sc.lora_available) or (self.used["lora"] > 0)
+            if allbad and no_link_for > 2.0 and no_escape:
                 return "all_channels_jammed_no_escape"
         return None
 
@@ -145,6 +175,9 @@ class Controller:
             self.used["silent"] += 1
         elif c == "load_test":
             s.load_test(a.get("factor", 0.5))
+        elif c == "neighbor_probe":
+            if hasattr(s, "neighbor_probe"):
+                s.neighbor_probe(a.get("peer"))
         elif c == "hop_channel":
             s.hop_channel(a.get("channel", s.channel))
             self.used["hops"] += 1
@@ -166,7 +199,8 @@ class Controller:
             self.used["costly"] += 2
         elif c == "fallback_to_lora":
             s.fallback_to_lora()
-            self.used["costly"] += 1
+            self.used["lora"] += 1
+            self.used["costly"] += BUDGET_COST["fallback_to_lora"]
         elif c == "declare_link_lost":
             s.declare_link_lost()
             self.declared = True
@@ -194,7 +228,26 @@ class Controller:
             obs = s.step(budget_view)
             feats = self.ex.update(obs)
 
-            pdr = (sum(l.pdr for l in obs.links.values()) / max(1, len(obs.links)))
+            # DECISION D9 (AUDIT/G1): link health is BIDIRECTIONAL.
+            #
+            # This used to average the forward PDR only -- the frames WE receive. Under that
+            # metric `set_tx_power` is inert by construction, because raising our own transmit
+            # power cannot improve what we hear. But PLAYBOOK["fading"] = set_tx_power, so the
+            # recommended remedy for the single most important family provably could not move
+            # the number it was judged on. G1 caught it: the call changed nothing in any family.
+            #
+            # A link is only usable if traffic flows BOTH ways -- an 802.11 data frame that is
+            # not ACKed is a lost frame, and the ACK depends on the peer hearing US. So health
+            # is the WORSE of the two directions, using the peer's own reciprocal report
+            # (TELEMETRY.md §2) when it is fresh enough to trust.
+            #
+            # This keeps the physics honest rather than pretending our TX power improves our
+            # RX: under fading BOTH directions degrade and raising power lifts the reverse one,
+            # so the action helps. Under jamming at OUR location the reverse link stays healthy
+            # and only the forward one is hurt, so raising power does NOT help -- which is
+            # exactly the discrimination the design wants.
+            pdr = (sum(_link_health(l) for l in obs.links.values())
+                   / max(1, len(obs.links)))
             pdr_hist.append(pdr)
             offered_total += 1.0
             delivered_total += pdr
@@ -239,8 +292,18 @@ class Controller:
                 d = self.agent.decide(feats, ctx)
                 # An action already tried for this same hypothesis, which did not
                 # restore the link, is not tried again -- escalate or abstain.
+                # AUDIT: the repeat-suppressor used to cover EVERY call, including
+                # diagnostic tests. Re-issuing a RECOVERY that already failed is pointless
+                # -- that is what this is for. Re-issuing a TEST is how you get a second
+                # sample, and `scan_periodicity` is defined as "the hot channel moved
+                # BETWEEN scans", so it is uncomputable from one. Suppressing the second
+                # scan therefore made sweep undiagnosable and, worse, did it silently: the
+                # call was rewritten to no_op while `spectrum_scan` stayed in the action
+                # mask, so the agent asked again, and again, and never learned why. The
+                # budget (max_spectrum_scans) is what bounds tests; this is not.
                 key = (d.top, d.call)
                 if (d.call not in ("no_op", "declare_link_lost")
+                        and d.call not in DIAGNOSE
                         and key in self.tried
                         and (t - self.tried[key]) < 900.0):
                     d = Decision(belief=d.belief, call="no_op",
@@ -259,14 +322,17 @@ class Controller:
                                  "top": d.top, "available": list(ctx.available)})
             self.log.classification_trace.append(
                 {"t": round(t, 2), "top": d.top, "p": round(d.top_p, 3),
+                 # `declared` is what the agent COMMITS to under the cost matrix; `top` is
+                 # argmax of the posterior. They differ whenever the asymmetry bites, which
+                 # is the whole reason the matrix exists (AUDIT F4.3).
+                 "declared": d.declared,
                  "belief": {k: round(v, 3) for k, v in d.belief.items()},
                  "unrecoverable": round(d.unrecoverable, 3)})
             if d.top in ("barrage", "spot", "reactive", "sweep") and d.top_p >= self.th["act_confidence"]:
                 self.log.declared_jamming = True
 
-            if d.call in ("spectrum_scan", "listen_test", "transmit_probe",
-                          "neighbor_probe", "silent_listen", "load_test",
-                          "channel_hop_probe", "mobility_test"):
+            if d.call in ("spectrum_scan", "neighbor_probe", "silent_listen",
+                          "load_test", "channel_hop_probe", "mobility_test"):
                 self.log.tests_run.append({"t": round(t, 2), "test": d.call,
                                            "args": d.args, "why": d.why})
             elif d.call != "no_op":
@@ -294,8 +360,13 @@ class Controller:
         self.log.packets_lost = round(offered_total - delivered_total, 1)
         self.log.pdr_series = [[round(i * s.dt, 1), round(p, 3)]
                                for i, p in enumerate(pdr_hist) if i % 5 == 0]
+        # AUDIT F4.2: `survived` used to be computed HERE, from `sc.truth.recoverable`,
+        # and the verifier simply read it back -- so the component that is not allowed to
+        # see ground truth was handing the scorer a truth-derived metric. The controller
+        # now records only what it observed; verify/verifier.py computes survival.
         recovered = self.log.recovery_t is not None
-        self.log.survived = bool(recovered or (self.declared and not sc.truth.recoverable))
+        self.log.recovered = recovered
+        self.log.survived = None
         if not self.log.end_reason:
             self.log.end_reason = "recovered" if recovered else "episode_end"
         return self.log

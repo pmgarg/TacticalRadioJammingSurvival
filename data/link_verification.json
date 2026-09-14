@@ -1,0 +1,56 @@
+[
+ {
+  "link": "L1",
+  "what": "corpus -> scenarios build",
+  "pass": true,
+  "detail": "54 scenarios, 9 families  [1.7s]"
+ },
+ {
+  "link": "L3",
+  "what": "refsim -> 56-feature vector",
+  "pass": true,
+  "detail": "56 features, all in [-1,1]  [0.0s]"
+ },
+ {
+  "link": "L5",
+  "what": "oracle teacher -> controller -> refsim",
+  "pass": true,
+  "detail": "5/5 correct  [0.4s]"
+ },
+ {
+  "link": "L8",
+  "what": "student -> controller -> refsim",
+  "pass": true,
+  "detail": "6/6 correct, bundle 265.7 KB  [0.5s]"
+ },
+ {
+  "link": "L9",
+  "what": "safety envelope (action masking + failsafe)",
+  "pass": true,
+  "detail": "AGENT SAFETY SUITE: 14 passed, 0 failed  [0.9s]"
+ },
+ {
+  "link": "L13",
+  "what": "episode -> verifier -> scored metrics",
+  "pass": true,
+  "detail": "declared=fading cost=0.000 fp=False fp_acted=False  [0.1s]"
+ },
+ {
+  "link": "H1",
+  "what": "tool registry generated from contract",
+  "pass": true,
+  "detail": "16 tools, contract==api  [0.0s]"
+ },
+ {
+  "link": "H2",
+  "what": "parser: clean / repaired / failed all handled",
+  "pass": true,
+  "detail": "4/4 modes correct  [0.0s]"
+ },
+ {
+  "link": "H3",
+  "what": "trace store: append -> reload -> summarise",
+  "pass": true,
+  "detail": "{\"records\": 3, \"episodes\": 1, \"parse_modes\": {\"clean\": 3}, \"calls\": {\"no_op\": 3}, \"mean_latency_s\": 0.5, \"cache_hit_rate\": 0.0}  [0.0s]"
+ }
+]

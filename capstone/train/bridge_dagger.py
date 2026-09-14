@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse, glob, json, os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from agent.teacher import TeacherAgent
+from agent.teacher import OracleLabeller
 from agent.api import Context
 from scenario.schema import load_scenario
 from sim.bridge_server import run as bridge_run
@@ -45,7 +45,7 @@ def main():
         ok += 1
         # one teacher per episode, states fed in order (a fresh teacher per state
         # resets its "already tested?" counter and poisons the labels)
-        teach = TeacherAgent(sc.truth.cause, sc.truth.recoverable)
+        teach = OracleLabeller(sc.truth.cause, sc.truth.recoverable)
         teach.reset()
         for rec in r["records"]:
             ctx = Context(t=rec["t"], channel=sc.channel, n_channels=sc.n_channels,

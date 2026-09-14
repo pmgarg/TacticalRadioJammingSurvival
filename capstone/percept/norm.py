@@ -36,6 +36,15 @@ FADE_PDR_THRESH = 0.5                        # below this counts as "in a fade" 
 CUSUM_K = 0.02
 CUSUM_H = 0.35
 JAM_ENERGY_DBM = -80.0
+# A channel counts as "hot" if it sits HOT_MARGIN_DB above our own quiet noise floor
+# (or above JAM_ENERGY_DBM, whichever is lower). Relative, so it survives a jammer that
+# happens to land on the absolute threshold -- see features.py, spectral memory.
+NOMINAL_NOISE_DBM = -96.0
+HOT_MARGIN_DB = 8.0
+# A scan's hot channel only counts as "the" hot channel when it stands this far above the
+# band median. Without it, a flat barrage band produces a random argmax each scan, which
+# reads as a moving hot channel -- i.e. it manufactures a sweep signature out of noise.
+HOT_PEAK_MARGIN_DB = 3.0
 
 
 def clamp(x: float, lo: float = -1.0, hi: float = 1.0) -> float:
@@ -50,3 +59,7 @@ def nz(x: float, offset: float, scale: float) -> float:
 def unit(x: float) -> float:
     """Already 0..1 -> map to -1..1."""
     return clamp(2.0 * x - 1.0)
+
+# The anomaly gate may not fire before this much of an episode has elapsed: every
+# trigger is a departure from a baseline, and there is no baseline yet.
+GATE_WARMUP_S = 4.0
