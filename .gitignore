@@ -20,3 +20,6 @@ _scratch/
 # inline (harness/trace.py keeps prompt+response per step) -- not source.
 data/llm_cache/
 data/manual_llm_trace.jsonl
+
+# Claude Code runtime lock file, not project content
+.claude/scheduled_tasks.lock
