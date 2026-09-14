@@ -25,19 +25,36 @@ from scenario.library import FAMILIES, build_corpus
 from sim.refsim import RefSim
 from agent.controller import Controller
 from agent.baseline import BaselineAgent
+from agent.teacher import TeacherAgent
+from agent.student import StudentAgent
 from verify.verifier import score_episode, aggregate, gates
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONTRACT = json.load(open(os.path.join(HERE, "contract", "agent_contract.json")))
 COSTCFG = yaml.safe_load(open(os.path.join(HERE, "contract", "cost_matrix.yaml")))
 
-AGENTS = {"baseline": BaselineAgent}
+# "rules" (agent.rule_agent.RuleAgent) is intentionally not registered here yet --
+# its default policy file (data/policy_v3.json) was never committed; see
+# personal/CODE_ALIGNMENT_REVIEW.md. Register it once harness/induce.py has produced
+# and saved that file.
+STUDENT_BUNDLE = os.path.join(HERE, "..", "data", "student_final", "student_bundle.json")
+AGENTS = {
+    # zero-arg factories only; "oracle" needs the scenario's own truth and is built
+    # per-episode in run_one() below, since a privileged agent cannot be a stateless
+    # singleton the way the others are.
+    "baseline": BaselineAgent,
+    "student": lambda: StudentAgent(STUDENT_BUNDLE),
+    "oracle": None,
+}
 
 
 def run_one(sc: Scenario, agent_name: str = "baseline", verbose: bool = False,
             out_dir: str | None = None) -> tuple[dict, dict]:
     sim = RefSim(sc)
-    agent = AGENTS[agent_name]()
+    if agent_name == "oracle":
+        agent = TeacherAgent(sc.truth.cause, sc.truth.recoverable)
+    else:
+        agent = AGENTS[agent_name]()
     ctrl = Controller(sim, sc, agent, CONTRACT, verbose=verbose)
     log = ctrl.run()
     truth = {"cause": sc.truth.cause, "onset_t": sc.truth.onset_t,
