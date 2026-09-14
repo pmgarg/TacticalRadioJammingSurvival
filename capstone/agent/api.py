@@ -35,6 +35,17 @@ class Decision:
     Agents that do not separate the two leave this None and the verifier falls back to
     argmax, so nothing downstream breaks."""
 
+    abstained: bool = False
+    """True when the agent DECLINED to classify -- the posterior of its
+    minimum-expected-cost class fell below the conformal threshold.
+
+    This is NOT the same as `declared is None`. An agent that never separates posterior
+    from decision also leaves `declared` None, and for that agent the verifier must fall
+    back to argmax. An abstention is a positive statement ("I do not know"), and scoring
+    it as a claim would credit or penalise the agent for something it explicitly refused
+    to say. The verifier keys on this flag, not on `declared`.
+    """
+
     @property
     def top(self) -> str:
         if not self.belief:

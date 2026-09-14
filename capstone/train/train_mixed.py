@@ -166,9 +166,32 @@ def main():
     # which defeats the version check the field exists for; and the abstain threshold was
     # hardcoded to 0.0, so the calibrated abstention the design describes never fired.
     _contract = json.load(open(os.path.join(HERE, "contract", "agent_contract.json")))
-    _abstain = (conformal_threshold(pv, yvc, classes, target_err=0.10)
-                if len(Xv) else 0.0)
-    print(f"  abstain threshold (conformal, on the min-cost statistic): {_abstain:.3f}")
+    # F5.1: calibrate on the DEPLOYMENT distribution, not the pooled one. refsim-val is
+    # the easy world (~0.98 accurate) and ns3-val is the world the agent is scored in
+    # (~0.88). Pooled, the error at q=0 sits just under the 10% target, so the smallest
+    # valid conformal cut is 0.0 and abstention never fires -- which is how v9 shipped
+    # with the calibrated abstention switched off while the code that computes it was
+    # correct. Calibrate on ns-3 alone; fall back to the pool only if there is no ns-3.
+    _cal = srcv == "ns3"
+    if _cal.sum() < 200:
+        _cal = np.ones(len(Xv), bool)
+        print("  NOTE: too few ns-3 validation rows; calibrating on the pooled set. The "
+              "threshold will be optimistic.")
+    _abstain = (conformal_threshold(pv[_cal], yvc[_cal], classes, target_err=0.10)
+                if _cal.sum() else 0.0)
+    print(f"  abstain threshold (conformal, on the min-cost statistic, "
+          f"calibrated on n={int(_cal.sum())} deployment-world rows): {_abstain:.3f}")
+    if _abstain == 0.0:
+        print("  WARNING: threshold 0.00 -> the student never abstains. Legitimate only if "
+              "the calibration error is genuinely under target; otherwise the calibration "
+              "set is easier than deployment. Re-check with train/calibrate_abstain.py.")
+    else:
+        _kept = pv[_cal][np.arange(int(_cal.sum())),
+                         [classes.index(c) for c in expected_cost_decision(pv[_cal], classes)]]
+        print(f"  retains {100 * (_kept >= _abstain).mean():.1f}% of deployment-world ticks")
+    print("  NOTE: this controls IN-DISTRIBUTION risk only. Run calibrate_abstain.py --ood "
+          "to see that the posterior carries no novelty signal on a held-out family; "
+          "catching that is agent/hybrid.py's job, not the threshold's.")
     json.dump({"contract_version": _contract["contract_version"],
                "n_features": int(X.shape[1]),
                "cause": dump(cause, lec), "call": dump(call, lea),

@@ -1,0 +1,22 @@
+{
+ "cause": {
+  "argmax_agreement": 0.9919028340080972,
+  "declared_agreement_on_acted": 0.9997006884166417,
+  "acted_frac": 0.9661654135338346,
+  "flips_to_act": 39,
+  "flips_to_abstain": 33,
+  "gate": "declared-class agreement on acted ticks",
+  "gate_stat": 0.9997006884166417,
+  "mean_l1": 0.017194192856550217,
+  "plan": "all int8",
+  "passes": true
+ },
+ "call": {
+  "argmax_agreement": 0.9976865240023135,
+  "gate": "argmax agreement",
+  "gate_stat": 0.9976865240023135,
+  "mean_l1": 0.006076552905142307,
+  "plan": "int8 except output layer",
+  "passes": true
+ }
+}

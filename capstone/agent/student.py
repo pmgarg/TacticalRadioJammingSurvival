@@ -103,9 +103,10 @@ class StudentAgent:
         # calibrated abstention: below threshold we do not claim a cause
         if conf < self.abstain:
             return Decision(belief, "no_op", {}, conf,
-                            why="posterior below the calibrated abstain threshold; "
-                                "gathering more evidence rather than acting",
-                            declared=None)
+                            why=f"posterior {conf:.2f} below the calibrated abstain "
+                                f"threshold {self.abstain:.2f}; gathering more evidence "
+                                f"rather than acting",
+                            declared=None, abstained=True)
 
         # `declared` is the cost-rule decision; `belief` stays the honest posterior.
         pa = self.call(x)

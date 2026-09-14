@@ -1,0 +1,51 @@
+==========================================================================
+DOES THE LLM TEACHER ACTUALLY TEACH THE STUDENT?  (ablation, 4 seeds)
+==========================================================================
+
+Setup: identical pipeline, identical data, identical hyper-parameters. The ONLY
+difference is whether the 89 rows from the LLM teacher (data/traces_llm/train.jsonl,
+weighted x3 = 267 of 36,783 training rows = 0.7%) are in the mix. Scored on the
+ns-3 test split, minimum-expected-cost decision, excluding the held-out `sweep`
+family (which no net can get and which would swamp the comparison).
+
+ seed   oracle only   +LLM rows     delta
+    0        84.96%      88.10%    +3.14%
+    1        89.20%      86.59%    -2.61%
+    2        85.49%      86.59%    +1.10%
+    3        87.99%      86.93%    -1.06%
+
+  mean delta  +0.14 points
+  std  delta  2.51 points
+  range       -2.61 .. +3.14
+
+RESULT: +0.14 +/- 2.18 points. The LLM teacher's contribution to the student NET is
+indistinguishable from zero. The +3.15 at seed 0 -- which is the seed train_mixed.py
+hardcodes, and therefore the only number a single run would ever have shown -- is
+seed variance, not signal. Congestion moved 57%->76% at seed 0 and 77%->74% at seed 1.
+
+SECOND FINDING, arguably the more important one: seed-to-seed spread on the headline
+ex-sweep accuracy is 84.96% .. 89.20%, a range of 4.2 points with NO change to the
+data or the model. Every accuracy figure in this project carries a +/-2 point error
+bar that none of the artefacts report. Two runs differing by less than that are not
+different.
+
+WHY THE LLM CONTRIBUTION IS ZERO, AND WHAT WOULD CHANGE IT
+  89 rows against 36,783 is 0.24% of the mix (0.7% after the x3 weight). No amount of
+  correctness in 89 rows moves a model fitted on 36,000. The traces also cover only 5
+  of 8 families (fading 36, sweep 23, spot 18, node_loss 8, barrage 4) -- reactive,
+  congestion and hidden_term, which are exactly the weak families, have ZERO LLM rows.
+  To make the design's distillation claim true the corpus needs thousands of rows
+  across all eight families, which is a real LLM spend, not a flag.
+
+WHERE THE LLM DEMONSTRABLY *DOES* DECIDE POLICY
+  data/policy_v3.json -- provenance "claude-cli induction, held-out validated". Six
+  rules, induced by the LLM from traces, gated at 0.95 held-out precision. Those rules
+  are what takes the held-out `sweep` family from 0% (net alone) to 47% (hybrid, 30
+  episodes). That is a measured LLM contribution to the deployed policy, and it is the
+  one that survives an ablation.
+
+  So the accurate claim is NOT "an LLM teacher distilled into the student net". It is
+  "an LLM induced the transferable rule layer; the net was distilled from the oracle".
+  Those are different sentences and only the second one is currently supported.
+
+==========================================================================

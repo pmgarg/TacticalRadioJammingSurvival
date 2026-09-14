@@ -73,6 +73,13 @@ def score_episode(log: dict, truth: dict, cost_cfg: dict,
     # leaves it absent and argmax is used. Scoring argmax while advertising a cost rule was
     # AUDIT F4.3 -- every headline number reflected a rule the code never applied.
     def claim(row):
+        # An abstention is a refusal to classify. `declared` is None on that row, but so
+        # it is for any agent that never separates posterior from decision -- so the None
+        # alone cannot distinguish the two. Key on the explicit flag instead, and return
+        # a sentinel that can never equal a cause name, so an abstained tick is neither
+        # credited as a detection nor charged as a misdiagnosis.
+        if row.get("abstained"):
+            return None
         return row.get("declared") or row["top"]
 
     act_times = [a["t"] for a in log.get("actions", [])]
@@ -96,7 +103,10 @@ def score_episode(log: dict, truth: dict, cost_cfg: dict,
     # operational cost of a misdiagnosis is actually incurred, so it is what the cost
     # matrix should score. Belief drift after the incident is resolved is not a new
     # claim. Falls back to the last confident classification if it never acted.
-    confident = [r for r in trace if r["p"] >= th["act_confidence"]]
+    # An abstained tick is never "a confident classification the agent committed to",
+    # however high the posterior of the class it declined to name.
+    confident = [r for r in trace
+                 if r["p"] >= th["act_confidence"] and not r.get("abstained")]
     acts = [a for a in log.get("actions", []) if a["fn"] != "declare_link_lost"]
     final = None
     if acts:

@@ -404,3 +404,35 @@ Live trace on the held-out family:
 the real teacher run needs your machine. Everything it depends on is wired and exercised end
 to end with a deterministic stub (`make llm-stub`) — the machinery is proven, the teacher is
 not.
+
+---
+
+## 6. Round five — the two dead design claims, and what measuring them found
+
+| id | change | evidence |
+|---|---|---|
+| F5.1 | **`abstain_threshold` was 0.0.** Not a bug in `conformal_threshold` — a bug in the calibration SET. `train_mixed.py` pooled refsim-val (97.6% acc) with ns3-val (88.4%); pooled error at q=0 is 9.3%, just under the 10% target, so the smallest valid cut is 0.0 and abstention never fires. Now calibrated on the deployment world alone | threshold **0.68**, retains 96.6% at 9.7% error. Closed loop: net 84.3→85.7%, expected cost 0.200→0.171; hybrid cost 0.100→0.086 |
+| F5.1a | New `train/calibrate_abstain.py` — re-derives the threshold post-hoc for any bundle (calibration changes no weight, so this needs no retrain) and runs the novelty check | `data/student_v9/abstain_calibration.json` |
+| F5.1b | `Decision.abstained` added. The verifier scored `declared or top`, so an abstention fell through to argmax and was credited/charged as a claim the agent refused to make. `controller.py` could likewise set `declared_jamming` off an abstained tick. Both masked while the threshold was 0 | `verify/verifier.py`, `agent/controller.py`, `agent/api.py` |
+| F5.2 | **`student_weights.h` was a 162-byte stub.** int8 export now runs against v9. Two changes: (a) **bias correction** — fold `mean(x) @ (Wq−W)` into the bias; cause head 98.67→99.19%, call head 99.25→99.77%; (b) the gate now scores the **deployed decision** (min-expected-cost class, on non-abstained ticks) rather than unconditional argmax, because that is what `student.py` acts on | cause all-int8, call int8-except-output. **16.0 KB** vs 48.8 KB fp32. Agreement on acted ticks **0.9997**. Header compiles under `gcc -fsyntax-only` |
+| F5.3 | **`train/ablate_llm.py`** — measures whether the LLM teacher changes the student net at all | it does not: **+0.14 ± 2.51 points over 4 seeds**. `data/student_v9/llm_ablation.txt` |
+
+### What measuring them actually found
+
+**Abstention does not detect novelty.** On the held-out `sweep` family the model is 0.000
+accurate at mean posterior 0.961 and abstains on only 4.2% of ticks — *less* than the 6.4%
+it abstains on in-distribution. The softmax posterior carries no out-of-distribution
+signal. Conformal abstention buys in-distribution risk control (it correctly pulls back on
+`hidden_term` 29% and `congestion` 16%) and nothing more. Catching the unseen family is the
+induced rules' job. Do not advertise the threshold as an OOD guard.
+
+**The LLM teacher does not teach the net.** 89 rows against 36,783 is 0.24% of the mix, and
+across four seeds the effect is inside the noise. The +3.14 that a single run would have
+shown is at seed 0 — the seed `train_mixed.py` hardcodes. The LLM's real and measurable
+contribution is `data/policy_v3.json`: six induced rules, held-out precision gated, which
+take `sweep` from 0% to 47%. The supportable claim is "an LLM induced the rule layer", not
+"an LLM taught the student".
+
+**Seed variance is ±2 points and no artefact reports it.** Ex-sweep accuracy ranges
+84.96–89.20% with identical data and model. Several comparisons elsewhere in this file are
+smaller than that and should not be read as differences.

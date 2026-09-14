@@ -326,9 +326,14 @@ class Controller:
                  # argmax of the posterior. They differ whenever the asymmetry bites, which
                  # is the whole reason the matrix exists (AUDIT F4.3).
                  "declared": d.declared,
+                 # An abstention is a positive refusal to claim, not a missing field.
+                 # The verifier must not fall back to argmax for these rows.
+                 "abstained": bool(getattr(d, "abstained", False)),
                  "belief": {k: round(v, 3) for k, v in d.belief.items()},
                  "unrecoverable": round(d.unrecoverable, 3)})
-            if d.top in ("barrage", "spot", "reactive", "sweep") and d.top_p >= self.th["act_confidence"]:
+            if (not getattr(d, "abstained", False)
+                    and d.top in ("barrage", "spot", "reactive", "sweep")
+                    and d.top_p >= self.th["act_confidence"]):
                 self.log.declared_jamming = True
 
             if d.call in ("spectrum_scan", "neighbor_probe", "silent_listen",

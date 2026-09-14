@@ -1,5 +1,5 @@
 ==========================================================================
-HYBRID GENERALISATION -- 70 episodes from ../data/corpus/test
+HYBRID GENERALISATION -- 95 episodes from ../data/corpus/test
 ==========================================================================
 
 family            n   baseline       net    hybrid   delta(hybrid-net)
@@ -8,17 +8,17 @@ congestion        6      100%     100%     100%       +0%
 fading            6      100%     100%     100%       +0%
 hidden_term       9        0%     100%     100%       +0%
 node_loss         8        0%     100%     100%       +0%
-reactive          7       57%      86%      86%       +0%
-refusal          10       90%     100%     100%       +0%
+reactive          7       57%     100%     100%       +0%
+refusal          15       93%     100%     100%       +0%
 spot              8      100%     100%     100%       +0%
-sweep            10        0%       0%      50%      +50%  <== HELD OUT
+sweep            30        7%       0%      47%      +47%  <== HELD OUT
 
-  baseline  overall 39/70 = 55.7%   expected cost 1.600
-  net       overall 59/70 = 84.3%   expected cost 0.200
-  hybrid    overall 64/70 = 91.4%   expected cost 0.100
+  baseline  overall 46/95 = 48.4%   expected cost 1.463
+  net       overall 65/95 = 68.4%   expected cost 0.411
+  hybrid    overall 79/95 = 83.2%   expected cost 0.221
 
 ==========================================================================
-HELD-OUT FAMILY 'sweep':  net 0%   hybrid 50%
+HELD-OUT FAMILY 'sweep':  net 0%   hybrid 47%
 The induced rule fires on a family the net never trained on. The rules carry
 physics that transfers; the net carries structure that does not. That is the
 whole argument for the hybrid, and it is now a number.
