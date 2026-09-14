@@ -1,0 +1,135 @@
+name: fading_10283
+family: fading
+truth:
+  cause: fading
+  onset_t: 15.2
+  recoverable: true
+  notes: ''
+nodes:
+- id: N1
+  pos:
+  - 0.0
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 131.1038812647787
+  - 127.73092382156051
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - 42.2080781746962
+  - -204.3144828814307
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - -100.26987461879247
+  - 245.23279613067353
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - 46.99694218501435
+  - -230.84625831430637
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - 184.8382329327223
+  - -27.177023392114165
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N7
+  pos:
+  - -148.9178749004592
+  - 41.320858623638344
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N8
+  pos:
+  - 117.40988477007767
+  - -30.431544156946643
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N9
+  pos:
+  - -283.7242536309971
+  - -280.288373358003
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10283
+duration_s: 74.8
+n_channels: 8
+channel: 6
+routing: olsr
+lora_available: true
+lora_jammed: false
+mobility:
+- node: N1
+  type: waypoint
+  velocity:
+  - 0.0
+  - 0.0
+  - 0.0
+  waypoints:
+  - - -189.3948639252285
+    - -63.67470138285885
+    - 30.0
+  speed: 6.406623622420094
+  bounds: null
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 192.9
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 13.1
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers: []
+events:
+- t: 15.2
+  type: fade_enter
+  target: N1
+  params:
+    depth_db: 12.933492534570922
+    nakagami_m: 1.0
+channel_model:
+  path_loss: log_distance
+  exponent: 2.3334901638246284
+  ref_loss_db: 38.40210769778576
+  fading: nakagami
+  nakagami_m: 2.715809600388517
+  doppler_hz: 18.529537355428193
+  shadowing_db: 2.0337362022690657
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 300.0
+meta: {}

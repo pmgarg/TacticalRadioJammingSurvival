@@ -1,0 +1,131 @@
+name: refusal_10610
+family: refusal
+truth:
+  cause: barrage
+  onset_t: 20.0
+  recoverable: false
+  notes: unrecoverable
+nodes:
+- id: N1
+  pos:
+  - 0.0
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 119.47060654870492
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - 238.94121309740984
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - 358.41181964611474
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10610
+duration_s: 62.6
+n_channels: 8
+channel: 4
+routing: olsr
+lora_available: true
+lora_jammed: true
+mobility: []
+traffic:
+- src: N1
+  dst: N4
+  rate_kbps: 166.6
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 22.1
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers:
+- id: J1
+  type: barrage
+  pos:
+  - 22.36153550724201
+  - -183.6027311498705
+  - 27.930786500605354
+  eirp_dbm: 28.81512730015723
+  channels:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  duty: 1.0
+  dwell_ms: 200.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+- id: J2
+  type: barrage
+  pos:
+  - -25.706190772565474
+  - -78.15553801990288
+  - 23.797769124565797
+  eirp_dbm: 28.66477942216564
+  channels:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  duty: 1.0
+  dwell_ms: 200.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+events:
+- t: 20.0
+  type: jammer_on
+  target: J1
+  params: {}
+- t: 20.0
+  type: jammer_on
+  target: J2
+  params: {}
+channel_model:
+  path_loss: log_distance
+  exponent: 2.584355292527279
+  ref_loss_db: 38.21521834165828
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 0.5358757641958314
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 240.0
+meta: {}

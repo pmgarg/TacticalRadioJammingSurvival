@@ -1,0 +1,119 @@
+name: fading_10351
+family: fading
+truth:
+  cause: fading
+  onset_t: 21.8
+  recoverable: true
+  notes: ''
+nodes:
+- id: N1
+  pos:
+  - 163.34347775635973
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 101.84299258122918
+  - 127.70707336573838
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - -36.34734322601762
+  - 159.24811573752595
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - -147.1673882333914
+  - 70.87207888939506
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - -147.16738823339142
+  - -70.87207888939503
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - -36.347343226017664
+  - -159.24811573752595
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N7
+  pos:
+  - 101.84299258122915
+  - -127.7070733657384
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10351
+duration_s: 63.6
+n_channels: 8
+channel: 5
+routing: olsr
+lora_available: true
+lora_jammed: false
+mobility:
+- node: N1
+  type: waypoint
+  velocity:
+  - 0.0
+  - 0.0
+  - 0.0
+  waypoints:
+  - - 40.71103764448392
+    - -55.512047189556014
+    - 30.0
+  speed: 10.643427272755066
+  bounds: null
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 231.9
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 26.6
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers: []
+events:
+- t: 21.8
+  type: fade_enter
+  target: N1
+  params:
+    depth_db: 12.780409521979422
+    nakagami_m: 1.0
+channel_model:
+  path_loss: log_distance
+  exponent: 2.3009524119131908
+  ref_loss_db: 38.46003524022901
+  fading: nakagami
+  nakagami_m: 2.5807467506596087
+  doppler_hz: 16.187912939261437
+  shadowing_db: 2.8942784387881484
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 300.0
+meta: {}

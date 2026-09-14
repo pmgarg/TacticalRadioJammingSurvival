@@ -1,0 +1,136 @@
+name: sweep_10248
+family: sweep
+truth:
+  cause: sweep
+  onset_t: 25.8
+  recoverable: true
+  notes: ''
+nodes:
+- id: N1
+  pos:
+  - 218.87900863566213
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 154.7708312656656
+  - 154.77083126566558
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - 1.3402473866310475e-14
+  - 218.87900863566213
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - -154.77083126566558
+  - 154.7708312656656
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - -218.87900863566213
+  - 2.680494773262095e-14
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - -154.77083126566563
+  - -154.77083126566558
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N7
+  pos:
+  - -4.0207421598931425e-14
+  - -218.87900863566213
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N8
+  pos:
+  - 154.77083126566555
+  - -154.77083126566563
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10248
+duration_s: 70.6
+n_channels: 8
+channel: 1
+routing: olsr
+lora_available: true
+lora_jammed: false
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 242.4
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 26.6
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers:
+- id: J1
+  type: sweep
+  pos:
+  - 178.83257569570654
+  - 49.24599970417356
+  - 24.905165808833573
+  eirp_dbm: 18.03935828097653
+  channels:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  duty: 1.0
+  dwell_ms: 150.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+events:
+- t: 25.8
+  type: jammer_on
+  target: J1
+  params: {}
+channel_model:
+  path_loss: log_distance
+  exponent: 2.4259257113873147
+  ref_loss_db: 41.388633150901875
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 0.743524666944555
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 300.0
+meta: {}

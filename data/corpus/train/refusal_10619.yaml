@@ -1,0 +1,155 @@
+name: refusal_10619
+family: refusal
+truth:
+  cause: barrage
+  onset_t: 20.5
+  recoverable: false
+  notes: unrecoverable
+nodes:
+- id: N1
+  pos:
+  - 0.0
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 122.19969834915585
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - 244.3993966983117
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - 366.5990950474676
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - 488.7987933966234
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - 610.9984917457792
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N7
+  pos:
+  - 733.1981900949352
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10619
+duration_s: 72.9
+n_channels: 8
+channel: 3
+routing: olsr
+lora_available: true
+lora_jammed: true
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 259.2
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 23.7
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers:
+- id: J1
+  type: barrage
+  pos:
+  - -72.3286696851836
+  - -40.27100655230796
+  - 28.529320619148752
+  eirp_dbm: 28.059447357966548
+  channels:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  duty: 1.0
+  dwell_ms: 200.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+- id: J2
+  type: barrage
+  pos:
+  - 165.39014969324268
+  - 27.61433955659006
+  - 24.908487637858123
+  eirp_dbm: 26.475685724667397
+  channels:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  duty: 1.0
+  dwell_ms: 200.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+events:
+- t: 20.5
+  type: jammer_on
+  target: J1
+  params: {}
+- t: 20.5
+  type: jammer_on
+  target: J2
+  params: {}
+channel_model:
+  path_loss: log_distance
+  exponent: 2.3277490802247853
+  ref_loss_db: 39.141725684857576
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 1.5367792085817251
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 240.0
+meta: {}

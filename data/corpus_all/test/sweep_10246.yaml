@@ -1,0 +1,112 @@
+name: sweep_10246
+family: sweep
+truth:
+  cause: sweep
+  onset_t: 25.4
+  recoverable: true
+  notes: ''
+nodes:
+- id: N1
+  pos:
+  - 0.0
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 266.731420897324
+  - -241.62756283561433
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - 39.5609859719645
+  - 69.46718538145677
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - 102.02075607572175
+  - 194.99383217144361
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - 7.858894928642201
+  - 0.5544466364764276
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10246
+duration_s: 59.8
+n_channels: 8
+channel: 5
+routing: olsr
+lora_available: true
+lora_jammed: false
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 299.3
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 13.8
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers:
+- id: J1
+  type: sweep
+  pos:
+  - -75.27173977375004
+  - -27.838699856485025
+  - 23.33224826468957
+  eirp_dbm: 14.578524633979592
+  channels:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  duty: 1.0
+  dwell_ms: 150.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+events:
+- t: 25.4
+  type: jammer_on
+  target: J1
+  params: {}
+channel_model:
+  path_loss: log_distance
+  exponent: 2.579369614009941
+  ref_loss_db: 41.287032056383126
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 0.8297469287502643
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 300.0
+meta: {}

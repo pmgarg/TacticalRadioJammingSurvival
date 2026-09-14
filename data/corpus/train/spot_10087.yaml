@@ -1,0 +1,113 @@
+name: spot_10087
+family: spot
+truth:
+  cause: spot
+  onset_t: 23.3
+  recoverable: true
+  notes: ''
+nodes:
+- id: N1
+  pos:
+  - 169.24510856427582
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 84.62255428213793
+  - 146.57056348291812
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - -84.62255428213787
+  - 146.57056348291815
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - -169.24510856427582
+  - 2.0726548047458668e-14
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - -84.62255428213798
+  - -146.5705634829181
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - 84.62255428213793
+  - -146.57056348291812
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10087
+duration_s: 59.7
+n_channels: 8
+channel: 7
+routing: olsr
+lora_available: true
+lora_jammed: false
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 199.2
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 19.4
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers:
+- id: J1
+  type: spot
+  pos:
+  - 24.914225695981088
+  - 20.906451244745647
+  - 22.960841394977837
+  eirp_dbm: 14.339748795629731
+  channels:
+  - 7
+  duty: 0.7
+  dwell_ms: 200.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+events:
+- t: 23.3
+  type: jammer_on
+  target: J1
+  params: {}
+channel_model:
+  path_loss: log_distance
+  exponent: 2.392184822106531
+  ref_loss_db: 41.792510418867614
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 1.8921852322458155
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 300.0
+meta: {}

@@ -1,0 +1,120 @@
+name: reactive_10147
+family: reactive
+truth:
+  cause: reactive
+  onset_t: 14.7
+  recoverable: true
+  notes: ''
+nodes:
+- id: N1
+  pos:
+  - 0.0
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 1.743510613737726
+  - 241.90447424167832
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - 0.293675577073401
+  - 243.35134748192797
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - 147.79102358540217
+  - 222.5322235435549
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - -218.9822899686674
+  - 140.9387383717164
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - 236.808351219783
+  - 49.44892330658581
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N7
+  pos:
+  - -190.3606381816626
+  - -212.3008250779679
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10147
+duration_s: 57.4
+n_channels: 8
+channel: 4
+routing: olsr
+lora_available: true
+lora_jammed: false
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 278.0
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 15.4
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers:
+- id: J1
+  type: reactive
+  pos:
+  - -34.13148056527613
+  - 180.18522711375996
+  - 27.1838085847453
+  eirp_dbm: 19.029196382057933
+  channels: []
+  duty: 1.0
+  dwell_ms: 200.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 11.673847205025863
+  burst_ms: 1.8377062435906484
+  p_fire: 0.8226166949798803
+events:
+- t: 14.7
+  type: jammer_on
+  target: J1
+  params: {}
+channel_model:
+  path_loss: log_distance
+  exponent: 2.326647421043842
+  ref_loss_db: 40.14548230060859
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 0.534502821314655
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 300.0
+meta: {}

@@ -1,0 +1,163 @@
+name: refusal_10575
+family: refusal
+truth:
+  cause: barrage
+  onset_t: 20.5
+  recoverable: false
+  notes: unrecoverable
+nodes:
+- id: N1
+  pos:
+  - 0.0
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - -38.79845030585335
+  - -297.27031193253725
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - -202.27241470210936
+  - 209.43245673488252
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - 35.102039039677265
+  - 167.57326420963352
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - 292.96484495329025
+  - 278.16862116327354
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - -47.32699950379231
+  - -222.86345636416792
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N7
+  pos:
+  - -181.90752066489955
+  - -54.061083808313526
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N8
+  pos:
+  - -307.52505205348973
+  - 98.62510976223467
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10575
+duration_s: 71.6
+n_channels: 8
+channel: 4
+routing: olsr
+lora_available: true
+lora_jammed: true
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 158.2
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 20.3
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers:
+- id: J1
+  type: barrage
+  pos:
+  - 54.603429223457
+  - -54.16529536048946
+  - 23.247527626853575
+  eirp_dbm: 26.55355549180956
+  channels:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  duty: 1.0
+  dwell_ms: 200.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+- id: J2
+  type: barrage
+  pos:
+  - 76.96867130978303
+  - 143.3851002625832
+  - 20.516830211352
+  eirp_dbm: 24.433867512508826
+  channels:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  duty: 1.0
+  dwell_ms: 200.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+events:
+- t: 20.5
+  type: jammer_on
+  target: J1
+  params: {}
+- t: 20.5
+  type: jammer_on
+  target: J2
+  params: {}
+channel_model:
+  path_loss: log_distance
+  exponent: 2.329872400694172
+  ref_loss_db: 39.65621273500899
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 0.19859359985844005
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 300.0
+meta: {}

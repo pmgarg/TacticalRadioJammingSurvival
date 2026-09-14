@@ -1,0 +1,111 @@
+name: fading_10335
+family: fading
+truth:
+  cause: fading
+  onset_t: 16.0
+  recoverable: true
+  notes: ''
+nodes:
+- id: N1
+  pos:
+  - 0.0
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 120.0
+  - 90.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - 240.0
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - 0.0
+  - -160.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - 240.0
+  - -160.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - 120.0
+  - -260.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10335
+duration_s: 70.9
+n_channels: 8
+channel: 6
+routing: olsr
+lora_available: true
+lora_jammed: false
+mobility:
+- node: N1
+  type: waypoint
+  velocity:
+  - 0.0
+  - 0.0
+  - 0.0
+  waypoints:
+  - - -173.89641360392133
+    - -97.39722611152422
+    - 30.0
+  speed: 15.261209977951033
+  bounds: null
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 200.2
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 14.5
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers: []
+events:
+- t: 16.0
+  type: fade_enter
+  target: N1
+  params:
+    depth_db: 11.30850987314868
+    nakagami_m: 1.0
+channel_model:
+  path_loss: log_distance
+  exponent: 2.363174980952089
+  ref_loss_db: 39.14886202369758
+  fading: nakagami
+  nakagami_m: 3.49662447056963
+  doppler_hz: 18.096375510169544
+  shadowing_db: 1.0274719863313628
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 220.0
+meta: {}

@@ -1,0 +1,123 @@
+name: hidden_term_10566
+family: hidden_term
+truth:
+  cause: hidden_term
+  onset_t: 19.9
+  recoverable: true
+  notes: ''
+nodes:
+- id: N1
+  pos:
+  - 0.0
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 147.92888833521866
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - 295.8577766704373
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - 0.0
+  - -147.92888833521866
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - 147.92888833521866
+  - -147.92888833521866
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - 295.8577766704373
+  - -147.92888833521866
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N7
+  pos:
+  - 0.0
+  - -295.8577766704373
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N8
+  pos:
+  - 147.92888833521866
+  - -295.8577766704373
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N9
+  pos:
+  - 295.8577766704373
+  - -295.8577766704373
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10566
+duration_s: 58.0
+n_channels: 8
+channel: 5
+routing: olsr
+lora_available: true
+lora_jammed: false
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 245.6
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 25.3
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers: []
+events:
+- t: 19.9
+  type: load_spike
+  target: null
+  params:
+    factor: 11.04065257192152
+    hidden: true
+channel_model:
+  path_loss: log_distance
+  exponent: 2.503504808438518
+  ref_loss_db: 39.47890892618892
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 0.563684635403717
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 240.0
+meta: {}

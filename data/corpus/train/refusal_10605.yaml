@@ -1,0 +1,155 @@
+name: refusal_10605
+family: refusal
+truth:
+  cause: barrage
+  onset_t: 14.4
+  recoverable: false
+  notes: unrecoverable
+nodes:
+- id: N1
+  pos:
+  - 221.92735989374643
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 138.36944564718382
+  - 173.50979678594376
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - -49.38348339401555
+  - 216.36317763723437
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - -199.94964220004144
+  - 96.29067272318673
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - -199.94964220004147
+  - -96.29067272318669
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - -49.383483394015606
+  - -216.36317763723437
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N7
+  pos:
+  - 138.36944564718377
+  - -173.50979678594376
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10605
+duration_s: 63.8
+n_channels: 8
+channel: 6
+routing: olsr
+lora_available: true
+lora_jammed: true
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 216.3
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 20.8
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers:
+- id: J1
+  type: barrage
+  pos:
+  - 74.27585958341825
+  - -79.15388251425082
+  - 19.27552320039178
+  eirp_dbm: 27.540927957647767
+  channels:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  duty: 1.0
+  dwell_ms: 200.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+- id: J2
+  type: barrage
+  pos:
+  - 260.4037402879218
+  - 137.29920751522295
+  - 21.6238284804782
+  eirp_dbm: 28.111758772335076
+  channels:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  duty: 1.0
+  dwell_ms: 200.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+events:
+- t: 14.4
+  type: jammer_on
+  target: J1
+  params: {}
+- t: 14.4
+  type: jammer_on
+  target: J2
+  params: {}
+channel_model:
+  path_loss: log_distance
+  exponent: 2.332318902397295
+  ref_loss_db: 41.42510367543456
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 1.1759864737717447
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 300.0
+meta: {}

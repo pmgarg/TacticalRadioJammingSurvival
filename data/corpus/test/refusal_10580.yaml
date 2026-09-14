@@ -1,0 +1,147 @@
+name: refusal_10580
+family: refusal
+truth:
+  cause: barrage
+  onset_t: 18.0
+  recoverable: false
+  notes: unrecoverable
+nodes:
+- id: N1
+  pos:
+  - 0.0
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 120.0
+  - 90.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - 240.0
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - 0.0
+  - -160.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - 240.0
+  - -160.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - 120.0
+  - -260.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10580
+duration_s: 58.2
+n_channels: 8
+channel: 2
+routing: olsr
+lora_available: true
+lora_jammed: true
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 224.9
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 14.5
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers:
+- id: J1
+  type: barrage
+  pos:
+  - -66.97168959528639
+  - 21.837263622274094
+  - 20.367787069299375
+  eirp_dbm: 25.038504962249288
+  channels:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  duty: 1.0
+  dwell_ms: 200.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+- id: J2
+  type: barrage
+  pos:
+  - 142.11712035405486
+  - 95.97925791698239
+  - 29.682776883773162
+  eirp_dbm: 29.636096798814364
+  channels:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  duty: 1.0
+  dwell_ms: 200.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+events:
+- t: 18.0
+  type: jammer_on
+  target: J1
+  params: {}
+- t: 18.0
+  type: jammer_on
+  target: J2
+  params: {}
+channel_model:
+  path_loss: log_distance
+  exponent: 2.6151762174051383
+  ref_loss_db: 39.05502340294151
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 0.6764890531793217
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 220.0
+meta: {}

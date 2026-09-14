@@ -1,0 +1,259 @@
+{
+  "contract_version": "1.1.0",
+  "description": "Frozen interface between the world (ns-3 / refsim), the percept layer, the agent, and the verifier. Changing this is a breaking change for four subsystems.",
+  "hypotheses": [
+    {
+      "id": "barrage",
+      "attacker": true,
+      "index": 0
+    },
+    {
+      "id": "spot",
+      "attacker": true,
+      "index": 1
+    },
+    {
+      "id": "reactive",
+      "attacker": true,
+      "index": 2
+    },
+    {
+      "id": "sweep",
+      "attacker": true,
+      "index": 3
+    },
+    {
+      "id": "fading",
+      "attacker": false,
+      "index": 4
+    },
+    {
+      "id": "node_loss",
+      "attacker": false,
+      "index": 5
+    },
+    {
+      "id": "congestion",
+      "attacker": false,
+      "index": 6
+    },
+    {
+      "id": "hidden_term",
+      "attacker": false,
+      "index": 7
+    },
+    {
+      "id": "unknown",
+      "attacker": null,
+      "index": 8
+    }
+  ],
+  "sense": {
+    "get_rssi": {
+      "cost": 0,
+      "returns": "dict[link_id -> dBm]"
+    },
+    "get_noise_floor": {
+      "cost": 0,
+      "returns": "dict[channel -> dBm]"
+    },
+    "get_pdr": {
+      "cost": 0,
+      "returns": "dict[link_id -> 0..1]"
+    },
+    "get_retry_rate": {
+      "cost": 0,
+      "returns": "dict[link_id -> 0..1]"
+    },
+    "get_spectrum": {
+      "cost": 0,
+      "returns": "last snapshot: list[{ch,power,busy,decodable_fps}]"
+    },
+    "get_neighbor_status": {
+      "cost": 0,
+      "returns": "dict[peer -> {reachable, last_heard_s}]"
+    },
+    "get_route_status": {
+      "cost": 0,
+      "returns": "dict[dest -> {next_hop, hops, valid}]"
+    },
+    "self_state": {
+      "cost": 0,
+      "returns": "{pos, vel, budget_left, t}"
+    }
+  },
+  "diagnose": {
+    "spectrum_scan": {
+      "cost": 1,
+      "budget": 0,
+      "duration_ms": 260,
+      "args": {
+        "channels": "list[int]|null",
+        "dwell_ms": "int=20"
+      },
+      "separates": [
+        "jamming|congestion",
+        "barrage|spot|sweep"
+      ]
+    },
+    "listen_test": {
+      "cost": 2,
+      "budget": 0,
+      "duration_ms": 100,
+      "args": {
+        "peer": "int"
+      },
+      "separates": [
+        "own_rx|channel"
+      ]
+    },
+    "transmit_probe": {
+      "cost": 2,
+      "budget": 0,
+      "duration_ms": 100,
+      "args": {
+        "peer": "int"
+      },
+      "separates": [
+        "own_tx|channel"
+      ]
+    },
+    "neighbor_probe": {
+      "cost": 2,
+      "budget": 0,
+      "duration_ms": 150,
+      "args": {
+        "peer": "int"
+      },
+      "separates": [
+        "node_loss|channel"
+      ]
+    },
+    "silent_listen": {
+      "cost": 2,
+      "budget": 0,
+      "duration_ms": 200,
+      "args": {
+        "duration_ms": "int=200"
+      },
+      "separates": [
+        "reactive|steady"
+      ]
+    },
+    "load_test": {
+      "cost": 2,
+      "budget": 0,
+      "duration_ms": 500,
+      "args": {
+        "factor": "float=0.5"
+      },
+      "separates": [
+        "congestion|jamming"
+      ]
+    },
+    "channel_hop_probe": {
+      "cost": 4,
+      "budget": 1,
+      "duration_ms": 400,
+      "args": {
+        "channel": "int"
+      },
+      "separates": [
+        "spot|barrage",
+        "refusal_input"
+      ]
+    },
+    "mobility_test": {
+      "cost": 8,
+      "budget": 2,
+      "duration_ms": 8000,
+      "args": {
+        "dx": "float",
+        "dy": "float",
+        "dz": "float"
+      },
+      "separates": [
+        "fading|attacker"
+      ]
+    }
+  },
+  "act": {
+    "no_op": {
+      "budget": 0,
+      "class": "free"
+    },
+    "set_tx_power": {
+      "budget": 0,
+      "class": "mild",
+      "args": {
+        "dbm": "int in [-4..20], 8 levels"
+      }
+    },
+    "reroute": {
+      "budget": 0,
+      "class": "mild",
+      "args": {
+        "via": "int|null"
+      }
+    },
+    "change_tdma_slot": {
+      "budget": 0,
+      "class": "mild",
+      "args": {
+        "slot": "int in [0..7]"
+      }
+    },
+    "hop_channel": {
+      "budget": 1,
+      "class": "costly",
+      "args": {
+        "channel": "int in [1..n_channels]"
+      }
+    },
+    "fallback_to_lora": {
+      "budget": 1,
+      "class": "costly",
+      "args": {}
+    },
+    "move": {
+      "budget": 2,
+      "class": "expensive",
+      "args": {
+        "dx": "float",
+        "dy": "float",
+        "dz": "float"
+      }
+    },
+    "declare_link_lost": {
+      "budget": 0,
+      "class": "terminal",
+      "args": {}
+    }
+  },
+  "budgets": {
+    "max_costly_actions": 6,
+    "max_channel_hops": 3,
+    "max_spectrum_scans": 4,
+    "min_scan_interval_s": 2.0,
+    "max_silent_listens": 3,
+    "max_moves": 2,
+    "recovery_timeout_s": 30.0,
+    "declare_lost_deadline_s": 25.0
+  },
+  "thresholds": {
+    "act_confidence": 0.75,
+    "recovery_pdr_frac_of_baseline": 0.8,
+    "recovery_hold_s": 3.0,
+    "no_link_declare_s": 20.0,
+    "jam_energy_dbm": -80.0
+  },
+  "decision_cadence_hz": 1.0,
+  "percept_rate_hz": 10.0,
+  "feature_window_T": 16,
+  "n_features": 56,
+  "telemetry": {
+    "reciprocal_link_report": "each beacon carries this node's measured (rssi,pdr) for each neighbour it hears; receivers extract the entry about themselves to learn the REVERSE link",
+    "tx_shadow_tau_ms": 3.0,
+    "notes": "see TELEMETRY.md - every quantity is obtainable on ESP32 as well as ns-3"
+  }
+}

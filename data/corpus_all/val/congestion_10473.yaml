@@ -1,0 +1,120 @@
+name: congestion_10473
+family: congestion
+truth:
+  cause: congestion
+  onset_t: 24.6
+  recoverable: true
+  notes: ''
+nodes:
+- id: N1
+  pos:
+  - 223.81491032373094
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 139.54631409077322
+  - 174.9855431368517
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - -49.80350287858535
+  - 218.20340323707708
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - -201.6502663740533
+  - 97.10965016152137
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - -201.65026637405333
+  - -97.10965016152132
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - -49.803502878585405
+  - -218.20340323707708
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N7
+  pos:
+  - 139.5463140907732
+  - -174.98554313685173
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10473
+duration_s: 55.9
+n_channels: 8
+channel: 5
+routing: olsr
+lora_available: true
+lora_jammed: false
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 134.6
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 21.1
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 2774.201363080216
+  packet_bytes: 512
+  start_s: 24.6
+  stop_s: null
+  type: burst
+- src: N3
+  dst: N4
+  rate_kbps: 1814.5549329344994
+  packet_bytes: 512
+  start_s: 24.6
+  stop_s: null
+  type: burst
+jammers: []
+events:
+- t: 24.6
+  type: load_spike
+  target: null
+  params:
+    factor: 11.568895112631385
+channel_model:
+  path_loss: log_distance
+  exponent: 2.401868778292069
+  ref_loss_db: 41.64518340072634
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 0.2884284615582031
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 300.0
+meta: {}

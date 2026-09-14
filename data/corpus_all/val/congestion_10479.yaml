@@ -1,0 +1,136 @@
+name: congestion_10479
+family: congestion
+truth:
+  cause: congestion
+  onset_t: 18.1
+  recoverable: true
+  notes: ''
+nodes:
+- id: N1
+  pos:
+  - 0.0
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 167.41053618673078
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - 334.82107237346156
+  - 0.0
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - 0.0
+  - -167.41053618673078
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - 167.41053618673078
+  - -167.41053618673078
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - 334.82107237346156
+  - -167.41053618673078
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N7
+  pos:
+  - 0.0
+  - -334.82107237346156
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N8
+  pos:
+  - 167.41053618673078
+  - -334.82107237346156
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N9
+  pos:
+  - 334.82107237346156
+  - -334.82107237346156
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10479
+duration_s: 59.2
+n_channels: 8
+channel: 2
+routing: olsr
+lora_available: true
+lora_jammed: false
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 295.7
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 15.9
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 3102.328522368781
+  packet_bytes: 512
+  start_s: 18.1
+  stop_s: null
+  type: burst
+- src: N3
+  dst: N4
+  rate_kbps: 2390.304235367689
+  packet_bytes: 512
+  start_s: 18.1
+  stop_s: null
+  type: burst
+jammers: []
+events:
+- t: 18.1
+  type: load_spike
+  target: null
+  params:
+    factor: 13.72608285552868
+channel_model:
+  path_loss: log_distance
+  exponent: 2.510405305320619
+  ref_loss_db: 39.80707495984018
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 0.3568107625671355
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 240.0
+meta: {}

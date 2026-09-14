@@ -1,0 +1,17 @@
+# C(true, declared) — expected operational cost of a misdiagnosis.
+# Read the `fading` row: declaring any jamming variety when it was fading is the
+# expensive error, because the response is a channel hop that splits the mesh.
+# Used as the training loss  L_hyp = sum_c C(y,c) * p_c  and reported in the paper.
+order: [barrage, spot, reactive, sweep, fading, node_loss, congestion, hidden_term]
+matrix:
+  barrage:     [0,  1,  2,  1,  4,  4,  3,  3]
+  spot:        [1,  0,  2,  1,  4,  4,  3,  3]
+  reactive:    [2,  2,  0,  2,  4,  4,  2,  2]
+  sweep:       [1,  1,  2,  0,  4,  4,  3,  3]
+  fading:      [10, 10, 8,  10, 0,  5,  6,  6]
+  node_loss:   [3,  3,  3,  3,  4,  0,  3,  3]
+  congestion:  [3,  3,  2,  3,  5,  4,  0,  1]
+  hidden_term: [3,  3,  2,  3,  5,  4,  1,  0]
+# Abstaining ("unknown") costs a flat 2.0 against any true cause: better than a
+# confident wrong answer, worse than a confident right one.
+abstain_cost: 2.0

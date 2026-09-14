@@ -1,0 +1,128 @@
+name: sweep_10233
+family: sweep
+truth:
+  cause: sweep
+  onset_t: 21.8
+  recoverable: true
+  notes: ''
+nodes:
+- id: N1
+  pos:
+  - 212.2075248361906
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 132.30922761304876
+  - 165.91052373355015
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - -47.220616619106906
+  - 206.88703913781978
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - -191.1923734120371
+  - 92.07339434480848
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - -191.19237341203714
+  - -92.07339434480843
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - -47.220616619106956
+  - -206.88703913781978
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N7
+  pos:
+  - 132.3092276130487
+  - -165.91052373355018
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10233
+duration_s: 59.0
+n_channels: 8
+channel: 8
+routing: olsr
+lora_available: true
+lora_jammed: false
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 249.2
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 12.6
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers:
+- id: J1
+  type: sweep
+  pos:
+  - 287.1815896667367
+  - -78.59745453996346
+  - 25.59807229049437
+  eirp_dbm: 21.480275546446133
+  channels:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  duty: 1.0
+  dwell_ms: 250.0
+  sweep_order: linear
+  threshold_dbm: -85.0
+  delay_us: 10.0
+  burst_ms: 1.5
+  p_fire: 1.0
+events:
+- t: 21.8
+  type: jammer_on
+  target: J1
+  params: {}
+channel_model:
+  path_loss: log_distance
+  exponent: 2.644240835707836
+  ref_loss_db: 39.44605250303195
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 0.4857111891520096
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 300.0
+meta: {}

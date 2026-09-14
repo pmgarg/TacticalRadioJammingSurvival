@@ -1,0 +1,128 @@
+name: congestion_10468
+family: congestion
+truth:
+  cause: congestion
+  onset_t: 25.1
+  recoverable: true
+  notes: ''
+nodes:
+- id: N1
+  pos:
+  - 0.0
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - -260.8541764749857
+  - 118.82682659674708
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - 113.75813371428785
+  - 92.823247082193
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - -173.6810065171318
+  - -93.54940978677138
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - -23.5005081793758
+  - 47.24759182651047
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N6
+  pos:
+  - -296.3370448745549
+  - 15.636639748962182
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N7
+  pos:
+  - 229.8411226425614
+  - -96.59475438017432
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N8
+  pos:
+  - -265.78795957532486
+  - 119.69078098923427
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10468
+duration_s: 71.7
+n_channels: 8
+channel: 3
+routing: olsr
+lora_available: true
+lora_jammed: false
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 299.1
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 28.8
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 3102.4410766327583
+  packet_bytes: 512
+  start_s: 25.1
+  stop_s: null
+  type: burst
+- src: N3
+  dst: N4
+  rate_kbps: 3198.747179409558
+  packet_bytes: 512
+  start_s: 25.1
+  stop_s: null
+  type: burst
+jammers: []
+events:
+- t: 25.1
+  type: load_spike
+  target: null
+  params:
+    factor: 8.513012085930278
+channel_model:
+  path_loss: log_distance
+  exponent: 2.2926409147463143
+  ref_loss_db: 39.01471531546565
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 0.020847597024734377
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 300.0
+meta: {}

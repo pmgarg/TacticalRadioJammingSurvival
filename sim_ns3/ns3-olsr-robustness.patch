@@ -1,0 +1,80 @@
+--- /tmp/olsr-header.cc.orig	2026-09-11 03:26:03.320947014 +0000
++++ src/olsr/model/olsr-header.cc	2026-09-11 03:26:57.214109508 +0000
+@@ -193,7 +193,9 @@
+         size += m_message.hna.GetSerializedSize();
+         break;
+     default:
+-        NS_ASSERT(false);
++        // give the switch a DEFINED default so the compiler cannot assume
++        // unreachability and emit an illegal instruction
++        return size;
+     }
+     return size;
+ }
+@@ -280,7 +282,13 @@
+     uint32_t size;
+     Buffer::Iterator i = start;
+     m_messageType = (MessageType)i.ReadU8();
+-    NS_ASSERT(m_messageType >= HELLO_MESSAGE && m_messageType <= HNA_MESSAGE);
++    // ROBUSTNESS PATCH (capstone): NS_ASSERT compiles away in optimized builds, so an
++    // out-of-range type fell through to an EMPTY default: and GCC emitted ud2 (SIGILL).
++    // Frames corrupted by strong jamming reach here -- exactly what this project makes.
++    // Consume only the header and let RecvOlsr drop the message. No routing logic
++    // changes; malformed input is refused instead of invoking undefined behaviour.
++    const bool olsrMsgTypeValid =
++        (m_messageType >= HELLO_MESSAGE && m_messageType <= HNA_MESSAGE);
+     m_vTime = i.ReadU8();
+     m_messageSize = i.ReadNtohU16();
+     m_originatorAddress = Ipv4Address(i.ReadNtohU32());
+@@ -288,6 +296,10 @@
+     m_hopCount = i.ReadU8();
+     m_messageSequenceNumber = i.ReadNtohU16();
+     size = OLSR_MSG_HEADER_SIZE;
++    if (!olsrMsgTypeValid || m_messageSize < OLSR_MSG_HEADER_SIZE)
++    {
++        return size; // header consumed, payload not parsed
++    }
+     switch (m_messageType)
+     {
+     case MID_MESSAGE:
+@@ -303,7 +315,9 @@
+         size += m_message.hna.Deserialize(i, m_messageSize - OLSR_MSG_HEADER_SIZE);
+         break;
+     default:
+-        NS_ASSERT(false);
++        // give the switch a DEFINED default so the compiler cannot assume
++        // unreachability and emit an illegal instruction
++        return size;
+     }
+     return size;
+ }
+--- /tmp/olsr-rp.cc.orig	2026-09-11 03:26:03.323092103 +0000
++++ src/olsr/model/olsr-routing-protocol.cc	2026-09-11 03:26:57.214577383 +0000
+@@ -524,6 +524,14 @@
+             NS_ASSERT(false);
+         }
+ 
++        // ROBUSTNESS PATCH (capstone): a corrupted packet could make GetSerializedSize()
++        // exceed sizeLeft, underflowing it to a huge value and looping ~forever.
++        if (messageHeader.GetSerializedSize() == 0 ||
++            messageHeader.GetSerializedSize() > sizeLeft)
++        {
++            NS_LOG_WARN("Malformed OLSR packet dropped (corrupted in the channel)");
++            break;
++        }
+         sizeLeft -= messageHeader.GetSerializedSize();
+ 
+         NS_LOG_DEBUG("Olsr Msg received with type "
+@@ -538,6 +546,12 @@
+     for (auto messageIter = messages.begin(); messageIter != messages.end(); messageIter++)
+     {
+         const MessageHeader& messageHeader = *messageIter;
++        // drop messages whose type did not survive the channel
++        if (messageHeader.GetMessageType() < MessageHeader::HELLO_MESSAGE ||
++            messageHeader.GetMessageType() > MessageHeader::HNA_MESSAGE)
++        {
++            continue;
++        }
+         // If ttl is less than or equal to zero, or
+         // the receiver is the same as the originator,
+         // the message must be silently dropped

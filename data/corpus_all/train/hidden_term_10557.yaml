@@ -1,0 +1,91 @@
+name: hidden_term_10557
+family: hidden_term
+truth:
+  cause: hidden_term
+  onset_t: 16.9
+  recoverable: true
+  notes: ''
+nodes:
+- id: N1
+  pos:
+  - 0.0
+  - 0.0
+  - 30.0
+  role: agent
+  tx_power_dbm: 16.0
+  alive: true
+- id: N2
+  pos:
+  - 107.9053589853965
+  - -93.48927101128317
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N3
+  pos:
+  - 162.98596369255768
+  - 27.025582465880007
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N4
+  pos:
+  - 194.48864849740607
+  - -225.60296352906988
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+- id: N5
+  pos:
+  - -92.1462145844435
+  - 17.204261177029366
+  - 30.0
+  role: peer
+  tx_power_dbm: 16.0
+  alive: true
+seed: 10557
+duration_s: 66.0
+n_channels: 8
+channel: 3
+routing: olsr
+lora_available: true
+lora_jammed: false
+mobility: []
+traffic:
+- src: N1
+  dst: N5
+  rate_kbps: 231.3
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+- src: N2
+  dst: N3
+  rate_kbps: 19.0
+  packet_bytes: 512
+  start_s: 1.0
+  stop_s: null
+  type: cbr
+jammers: []
+events:
+- t: 16.9
+  type: load_spike
+  target: null
+  params:
+    factor: 7.8221348832565
+    hidden: true
+channel_model:
+  path_loss: log_distance
+  exponent: 2.28050411565331
+  ref_loss_db: 38.0687112701192
+  fading: none
+  nakagami_m: 1.0
+  doppler_hz: 0.0
+  shadowing_db: 0.17560037643304605
+  noise_floor_dbm: -96.0
+links: auto
+comm_range_m: 300.0
+meta: {}
