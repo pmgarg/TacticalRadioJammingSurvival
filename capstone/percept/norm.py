@@ -44,7 +44,7 @@ HOT_MARGIN_DB = 8.0
 # A scan's hot channel only counts as "the" hot channel when it stands this far above the
 # band median. Without it, a flat barrage band produces a random argmax each scan, which
 # reads as a moving hot channel -- i.e. it manufactures a sweep signature out of noise.
-HOT_PEAK_MARGIN_DB = 6.0
+HOT_PEAK_MARGIN_DB = 3.0
 
 
 def clamp(x: float, lo: float = -1.0, hi: float = 1.0) -> float:
@@ -59,3 +59,7 @@ def nz(x: float, offset: float, scale: float) -> float:
 def unit(x: float) -> float:
     """Already 0..1 -> map to -1..1."""
     return clamp(2.0 * x - 1.0)
+
+# The anomaly gate may not fire before this much of an episode has elapsed: every
+# trigger is a departure from a baseline, and there is no baseline yet.
+GATE_WARMUP_S = 4.0

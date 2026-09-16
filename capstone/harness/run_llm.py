@@ -24,7 +24,7 @@ FAMILIES = ["barrage", "spot", "reactive", "sweep", "fading",
 
 
 def run_one(args) -> dict:
-    fam, seed, trace_dir, compare = args
+    fam, seed, trace_dir, compare, world, provider_kind, ns3_bin = args
     sys.path.insert(0, HERE)
     import yaml
     from scenario.corpus import make
@@ -33,7 +33,7 @@ def run_one(args) -> dict:
     from verify.verifier import score_episode
     from harness.loop import HarnessAgent
     from harness.trace import TraceStore
-    from gateway.provider import ClaudeCliProvider
+    from gateway.provider import make_provider
 
     contract = json.load(open(os.path.join(HERE, "contract", "agent_contract.json")))
     costcfg = yaml.safe_load(open(os.path.join(HERE, "contract", "cost_matrix.yaml")))
@@ -42,11 +42,27 @@ def run_one(args) -> dict:
              "recoverable": sc.truth.recoverable}
 
     ts = TraceStore(os.path.join(trace_dir, f"{fam}_{seed}.jsonl"))
-    ag = HarnessAgent(provider=ClaudeCliProvider(), trace=ts,
+    ag = HarnessAgent(provider=make_provider(provider_kind), trace=ts,
                       episode=f"{fam}_{seed}", family=fam)
     t0 = time.time()
     try:
-        log = Controller(RefSim(sc), sc, ag, contract).run()
+        if world == "ns3":
+            # THE edge the brief grades: the teacher reasoning against the AUTHORITATIVE
+            # simulator, not the fast approximation. A student trained only on refsim scores
+            # 96% on refsim and 50% on ns-3 (RESULTS.md section 3); there is no reason to
+            # think a teacher validated only on refsim is any safer.
+            from sim.bridge_server import run as run_bridge
+
+            class _L:
+                def __init__(self, d):
+                    self._d = d
+
+                def to_dict(self):
+                    return self._d
+
+            log = _L(run_bridge(sc, ns3_bin, agent_obj=ag, verbose=False)["episode_log"])
+        else:
+            log = Controller(RefSim(sc), sc, ag, contract).run()
         s = score_episode(log.to_dict(), truth, costcfg, contract, sc.family)
         out = {"family": fam, "seed": seed, "ok": True,
                "correct": bool(s.classification_ok), "declared": s.declared_cause,
@@ -61,10 +77,10 @@ def run_one(args) -> dict:
         ts.close()
 
     if compare:
-        from agent.teacher import TeacherAgent
+        from agent.teacher import OracleLabeller
         try:
             log2 = Controller(RefSim(make(fam, seed)), make(fam, seed),
-                              TeacherAgent(sc.truth.cause, sc.truth.recoverable),
+                              OracleLabeller(sc.truth.cause, sc.truth.recoverable),
                               contract).run()
             s2 = score_episode(log2.to_dict(), truth, costcfg, contract, sc.family)
             out["oracle_correct"] = bool(s2.classification_ok)
@@ -83,6 +99,13 @@ def main():
     ap.add_argument("--trace-dir", default=os.path.join(HERE, "..", "data", "traces", "llm"))
     ap.add_argument("--out", default=os.path.join(HERE, "..", "data", "llm_golden.json"))
     ap.add_argument("--compare-oracle", action="store_true", default=True)
+    ap.add_argument("--world", default="refsim", choices=["refsim", "ns3"],
+                    help="ns3 = the AUTHORITATIVE simulator, via the live bridge. Every "
+                         "headline teacher number should come from ns3 (DESIGN v2.0 9.2).")
+    ap.add_argument("--provider", default="auto", choices=["auto", "claude", "stub"],
+                    help="stub = deterministic offline stand-in, for testing the HARNESS "
+                         "with no model. Never report a stub run as a teacher result.")
+    ap.add_argument("--ns3", default=None, help="path to the jamming-sim binary (--world ns3)")
     a = ap.parse_args()
 
     os.makedirs(a.trace_dir, exist_ok=True)
@@ -98,7 +121,7 @@ def main():
         while got < a.per_family and seed < a.seed0 + 5000:
             ok, _why = _validate(_make(f, seed))
             if ok:
-                jobs.append((f, seed, a.trace_dir, a.compare_oracle))
+                jobs.append((f, seed, a.trace_dir, a.compare_oracle, a.world, a.provider, a.ns3))
                 got += 1
             else:
                 rejected += 1

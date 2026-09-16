@@ -25,7 +25,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from agent.api import Context
 from agent.baseline import BaselineAgent
 from agent.student import StudentAgent
+from agent.api import DIAGNOSE
 from agent.controller import LADDER
+
+# mirrors agent/controller.py::_available -- the calls that are always legal
+ACT_ALWAYS = ["set_tx_power", "reroute", "change_tdma_slot"]
+DIAG_ALWAYS = ["neighbor_probe", "load_test"]
 from percept.features import FeatureExtractor, RawObs, LinkObs, ChannelObs, ScanResult
 from scenario.schema import load_scenario
 from sim.export_ns3 import to_config
@@ -94,10 +99,17 @@ def state_to_obs(st: dict, ex_prev_scan_t, t) -> tuple[RawObs, ScanResult | None
     return obs, scan
 
 
-def run(scenario_path: str, ns3_bin: str, agent_name: str = "baseline",
+def run(scenario_path, ns3_bin: str, agent_name: str = "baseline",
         out_prefix: str | None = None, verbose: bool = True,
-        bundle: str | None = None) -> dict:
-    sc = load_scenario(scenario_path)
+        bundle: str | None = None, agent_obj=None) -> dict:
+    """`scenario_path` may be a path or an already-loaded Scenario.
+
+    `agent_obj` lets a CALLER supply the agent instead of naming one from the registry --
+    which is what makes it possible to drive the ns-3 bridge with the LLM teacher (whose
+    construction needs a provider and a trace store) rather than only with the agents this
+    module happens to know about.
+    """
+    sc = scenario_path if hasattr(scenario_path, "truth") else load_scenario(scenario_path)
     tmpd = tempfile.mkdtemp(prefix="bridge_")
     cfg = os.path.join(tmpd, "s.cfg")
     open(cfg, "w").write(to_config(sc))
@@ -108,15 +120,20 @@ def run(scenario_path: str, ns3_bin: str, agent_name: str = "baseline",
     srv.bind(sock_path)
     srv.listen(1)
 
+    # AUDIT F3: --tdmaSlots was never passed, so jamming-sim.cc kept its default of 0
+    # (CSMA only), MeshNodeApp::SetTdma() was never called and change_tdma_slot() was a
+    # no-op in every run -- three of the eight playbook entries depend on it.
     proc = subprocess.Popen(
-        [ns3_bin, f"--config={cfg}", f"--out={out_prefix}", f"--sock={sock_path}"],
+        [ns3_bin, f"--config={cfg}", f"--out={out_prefix}", f"--sock={sock_path}",
+         "--tdmaSlots=4"],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
     srv.settimeout(60)
     conn, _ = srv.accept()
     f = conn.makefile("rwb")
 
-    agent = StudentAgent(bundle) if agent_name == "student" else AGENTS[agent_name]()
+    agent = agent_obj if agent_obj is not None else (
+        StudentAgent(bundle) if agent_name == "student" else AGENTS[agent_name]())
     agent.reset()
     ex = FeatureExtractor(sc.n_channels, dt=0.1)   # percept runs at 10 Hz
     trace, actions, prev_scan_t = [], [], None
@@ -129,6 +146,12 @@ def run(scenario_path: str, ns3_bin: str, agent_name: str = "baseline",
     TH = CONTRACT["thresholds"]
     no_link_for = 0.0
     onset_t = None
+    # Recovery + delivery history, mirroring agent/controller.py so the two produce the
+    # same episode_log fields and the one verifier can score both.
+    pdr_series: list[list[float]] = []
+    baseline_pdr = None
+    recovery_hold_start = None
+    recovery_t = None
     declared = False
     last_t = 0.0
     WARMUP_S = 5.0     # OLSR convergence + beacon ramp; no diagnosis before this
@@ -156,9 +179,15 @@ def run(scenario_path: str, ns3_bin: str, agent_name: str = "baseline",
             pending_scan = False
         feats = ex.update(obs)
 
-        avail = ["no_op", "set_tx_power", "reroute", "change_tdma_slot",
-                 "listen_test", "transmit_probe", "neighbor_probe", "load_test"]
-        if used["scans"] < B["max_spectrum_scans"]:
+        # The always-available set is taken from the CONTRACT, not retyped here. This
+        # list had drifted: it still offered listen_test and transmit_probe after contract
+        # 1.2.0 removed them, so the bridge and the controller disagreed about what the
+        # agent was allowed to do -- two masks, two truths, and the live path was the one
+        # nobody was checking.
+        avail = ["no_op"] + [c for c in ACT_ALWAYS if c in CONTRACT["act"]] \
+                          + [c for c in DIAG_ALWAYS if c in CONTRACT["diagnose"]]
+        if (used["scans"] < B["max_spectrum_scans"]
+                and (prev_scan_t is None or (t - prev_scan_t) >= B["min_scan_interval_s"])):
             avail.append("spectrum_scan")
         if used["silent"] < B["max_silent_listens"]:
             avail.append("silent_listen")
@@ -193,6 +222,17 @@ def run(scenario_path: str, ns3_bin: str, agent_name: str = "baseline",
                    max(1, len(st.get("pdr", []) or [1])))
         dt_s = max(0.0, t - last_t); last_t = t
         no_link_for = 0.0 if pdr_now > 0.2 else no_link_for + dt_s
+        pdr_series.append([round(t, 1), round(pdr_now, 3)])
+        if baseline_pdr is None and t > 5.0:
+            early = [p for tt, p in pdr_series if tt <= 5.0]
+            baseline_pdr = (sum(early) / len(early)) if early else None
+        if baseline_pdr and pdr_now >= TH["recovery_pdr_frac_of_baseline"] * baseline_pdr:
+            if recovery_hold_start is None:
+                recovery_hold_start = t
+            elif (t - recovery_hold_start) >= TH["recovery_hold_s"] and recovery_t is None:
+                recovery_t = round(t, 2)
+        else:
+            recovery_hold_start = None
         if onset_t is None and ex.onset_t is not None:
             onset_t = ex.onset_t
         reason = None
@@ -228,8 +268,11 @@ def run(scenario_path: str, ns3_bin: str, agent_name: str = "baseline",
         if d.call not in avail:
             d.call, d.args = "no_op", {}
         # do not re-issue a remedy that already failed for this same hypothesis
+        # Same fix as agent/controller.py: diagnostics are exempt from the
+        # repeat-suppressor. A second scan is evidence, not a repeat.
         key = (d.top, d.call)
-        if d.call not in ("no_op", "declare_link_lost") and key in tried:
+        if (d.call not in ("no_op", "declare_link_lost") and d.call not in DIAGNOSE
+                and key in tried):
             d.call, d.args = "no_op", {}
         elif d.call != "no_op":
             tried[key] = t
@@ -271,9 +314,34 @@ def run(scenario_path: str, ns3_bin: str, agent_name: str = "baseline",
     except Exception:
         pass
     proc.wait(timeout=120)
+    # An episode_log in the SAME shape agent/controller.py produces, so verify/verifier.py
+    # scores a live ns-3 episode with exactly the code that scores a refsim one. Two scorers
+    # would be two truths.
+    hops = sum(1 for a in actions if a.get("fn") in ("hop_channel", "channel_hop_probe"))
+    tests = {"spectrum_scan", "neighbor_probe", "silent_listen", "load_test",
+             "channel_hop_probe", "mobility_test"}
+    declared_lost = next((a["t"] for a in actions if a.get("fn") == "declare_link_lost"), None)
+    episode_log = {
+        "episode_id": f"{sc.name}#{sc.seed}", "scenario": sc.name,
+        "agent": getattr(agent, "name", agent_name),
+        "attack_onset_t": onset_t,
+        "first_correct_classification_t": None,
+        "classification_trace": trace,
+        "tests_run": [{"t": a["t"], "test": a["fn"], "args": a.get("args", {}),
+                       "why": a.get("why", "")} for a in actions if a.get("fn") in tests],
+        "actions": [a for a in actions if a.get("fn") not in tests],
+        "recovery_t": recovery_t, "packets_lost": 0.0,
+        "actions_consumed": used["costly"], "hops_consumed": hops,
+        "tests_before_correct_classification": None,
+        "recovered": recovery_t is not None, "survived": None,
+        "declared_jamming": any(r.get("top") in ("barrage", "spot", "reactive", "sweep")
+                                for r in trace),
+        "declared_lost_t": declared_lost, "end_reason": "bridge_end", "pdr_series": pdr_series,
+    }
     return {"scenario": sc.name, "truth": sc.truth.cause, "trace": trace,
             "actions": actions, "out_prefix": out_prefix, "records": records,
-            "recoverable": sc.truth.recoverable, "family": sc.family}
+            "recoverable": sc.truth.recoverable, "family": sc.family,
+            "episode_log": episode_log}
 
 
 def main():

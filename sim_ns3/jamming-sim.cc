@@ -108,6 +108,7 @@ struct JammerSpec
     Ptr<WaveformGenerator> wg;
     bool on{false};
     int curIdx{0};
+    int psdCh{-1};  // AUDIT F3a: channel the PSD is currently pointed at (-1 = unset)
 };
 
 static std::vector<JammerSpec> g_jam;
@@ -116,12 +117,56 @@ static uint32_t g_nCh = 8;
 static uint32_t g_agentIdx = 0;
 static int g_curCh = 6;
 
+
+/* AUDIT F3f (MEASURED, then fixed): ns-3's SpectrumValue5MhzFactory puts the four
+ * full-power bins of CreateTxPowerSpectralDensity(p, ch) at model indices ch+3..ch+6.
+ * On that model, band index k spans [2387 + 5k, 2392 + 5k] MHz, so those four bins form a
+ * 20 MHz block centred at 2412 + 5*ch MHz -- while 802.11 channel `ch` is centred at
+ * 2407 + 5*ch MHz (ch1 = 2412). The helper therefore radiates EXACTLY ONE CHANNEL HIGH.
+ *
+ * Measured, not assumed: with jam.0.ch.0=6 the hottest band_power bin was channel 7
+ * (capstone/tests/test_world_ns3.py). The scenarios still "worked" because 20 MHz channels
+ * overlap heavily, which is why this hid -- but S5's hot-channel IDENTITY was shifted, so
+ * hop_channel was picking its "cleanest" channel from a shifted map.
+ *
+ * Shifting the helper's argument by -1 would fix it for ch >= 2 and write index -1 for
+ * ch == 1, so the block is built here instead, with the same 802.11 transmit mask
+ * (-28 dB and -40 dB shoulders) and bounds-checked indices.
+ */
+static Ptr<SpectrumValue>
+JamPsd(double watts, int wifiCh)
+{
+    Ptr<SpectrumValue> psd = g_psd.CreateTxPowerSpectralDensity(watts, 1);
+    (*psd) = 0.0;                       // reuse the 5 MHz model, start from silence
+    const double d = watts / 20e6;      // density over the 20 MHz block
+    const int n = (int)psd->GetSpectrumModel()->GetNumBands();
+    auto put = [&](int k, double v) {
+        if (k >= 0 && k < n)
+        {
+            (*psd)[k] = v;
+        }
+    };
+    // one bin lower than the stock helper at every position -- see the arithmetic above
+    put(wifiCh - 2, d * 1e-4);          // -40 dB
+    put(wifiCh - 1, d * 1e-4);
+    put(wifiCh + 0, d * 0.0015849);     // -28 dB
+    put(wifiCh + 1, d * 0.0015849);
+    put(wifiCh + 2, d);                 // the 20 MHz block, centred on 2407 + 5*ch MHz
+    put(wifiCh + 3, d);
+    put(wifiCh + 4, d);
+    put(wifiCh + 5, d);
+    put(wifiCh + 6, d * 0.0015849);     // -28 dB
+    put(wifiCh + 7, d * 0.0015849);
+    put(wifiCh + 8, d * 1e-4);          // -40 dB
+    put(wifiCh + 9, d * 1e-4);
+    return psd;
+}
+
 static void
 SetCh(JammerSpec& j, int ch)
 {
-    j.wg->SetTxPowerSpectralDensity(
-        g_psd.CreateTxPowerSpectralDensity(std::pow(10.0, (j.eirp - 30) / 10.0),
-                                           static_cast<uint8_t>(ch)));
+    j.wg->SetTxPowerSpectralDensity(JamPsd(std::pow(10.0, (j.eirp - 30) / 10.0), ch));
+    j.psdCh = ch;
 }
 
 static void
@@ -131,7 +176,7 @@ SetWide(JammerSpec& j)
     double per = std::pow(10.0, (j.eirp - 30) / 10.0) / std::max<size_t>(1, j.channels.size());
     for (int c : j.channels)
     {
-        Ptr<SpectrumValue> p = g_psd.CreateTxPowerSpectralDensity(per, static_cast<uint8_t>(c));
+        Ptr<SpectrumValue> p = JamPsd(per, c);
         if (!acc)
         {
             acc = p->Copy();
@@ -177,6 +222,39 @@ JamOff(size_t i)
     }
 }
 
+/* AUDIT F3a(a): a reactive jammer is a follower -- it jams whatever channel it just
+ * heard the victim transmit on. The config gives it no channel of its own
+ * (scenarios set `channels: []`, which export_ns3.py expands to the whole 1..8 band),
+ * so jam.i.ch.0 == 1 and the construction-time PSD sat on channel 1 while the mesh
+ * ran on channel 6 -- the burst never touched the victim. Point the PSD at the
+ * channel the mesh is actually using, unless exactly one channel was configured
+ * explicitly, in which case honour it. */
+static void
+PointAtVictim(JammerSpec& j)
+{
+    int ch = (j.channels.size() == 1) ? j.channels[0] : g_curCh;
+    if (j.psdCh != ch)
+    {
+        SetCh(j, ch);
+    }
+}
+
+/* AUDIT F3a(a)+(b): arm a reactive jammer. Same PSD setup JamOn() does for every
+ * other jammer type, but WITHOUT wg->Start() -- a reactive jammer only radiates from
+ * ReactiveTrigger(). Scheduled at the event's onset time so there is a clean
+ * pre-onset baseline (it used to be armed during main() setup, i.e. from t=0). */
+static void
+JamArmReactive(size_t i)
+{
+    if (i >= g_jam.size())
+    {
+        return;
+    }
+    auto& j = g_jam[i];
+    j.on = true;
+    PointAtVictim(j);
+}
+
 static void
 Sweep(size_t i)
 {
@@ -212,6 +290,9 @@ ReactiveTrigger(Ptr<const Packet>, double)
         {
             continue;
         }
+        // AUDIT F3a(a): re-point the PSD on every trigger, so a mesh-wide
+        // hop_channel does not make the follower jam an empty channel.
+        PointAtVictim(j);
         size_t idx = i;
         Simulator::Schedule(MicroSeconds(j.delayUs), [idx]() {
             if (idx < g_jam.size() && g_jam[idx].on)
@@ -257,6 +338,17 @@ static bool g_txSinceReport = false;   // any agent TX overlapping this report w
 static uint64_t g_txBegin = 0, g_cleanReports = 0, g_dirtyReports = 0;
 static uint64_t g_rxOk = 0, g_rxErr = 0;
 
+/* superseded FIXME(F3f), kept for the record: suspected one-channel offset between this
+ * helper and SpectrumValue5MhzFactory. ChHz(ch) is the true 802.11b/g centre of
+ * channel `ch` (ch1 = 2412 MHz), but SpectrumValue5MhzFactory numbers its 5 MHz
+ * bands from 2402 MHz with a 0-based index, so
+ * CreateTxPowerSpectralDensity(power, ch) -- called with a 1-based WiFi channel
+ * number in SetCh()/SetWide()/the jammer install site -- may land one 5 MHz band
+ * (i.e. one channel) above/below the channel the mesh is actually on. Verify by
+ * running a single spot jammer on a known channel and checking which g_band[] bin
+ * lights up in <out>.percept.csv; if it is off by one, the fix is an index
+ * adjustment at every CreateTxPowerSpectralDensity() call site, NOT here.
+ * Deliberately left unchanged in this pass -- needs measurement, not a guess. */
 static double
 ChHz(int ch)
 {
@@ -444,6 +536,65 @@ static void
 PhyRxDrop(Ptr<const Packet>, WifiPhyRxfailureReason)
 {
     g_rxErr++;
+}
+
+/* AUDIT F3g: the spectrum analyzer is its own node and used to be pinned with a
+ * ConstantPositionMobilityModel at the agent's INITIAL coordinates. After a `move`
+ * action, or in any scenario with mobility, the noise-floor / band-power reading
+ * therefore came from a point the agent had left. Keep the analyzer co-located with
+ * the agent instead. (The agent's MobilityModel is not simply aggregated onto the
+ * analyzer node: AggregateObject() would merge the two nodes' whole aggregates.) */
+static uint32_t g_flowSrcIdx = 0;   // AUDIT: node index of flow.0.src
+static Ptr<MobilityModel> g_agentMob, g_analyzerMob;
+
+static void
+SyncAnalyzerPos()
+{
+    if (g_agentMob && g_analyzerMob)
+    {
+        g_analyzerMob->SetPosition(g_agentMob->GetPosition());
+    }
+}
+
+static void
+SyncAnalyzerPosLoop()
+{
+    SyncAnalyzerPos();
+    // 100 ms == the sampling period, so the analyzer is in the right place for every
+    // reported sample even under ConstantVelocity / waypoint mobility.
+    Simulator::Schedule(MilliSeconds(100), &SyncAnalyzerPosLoop);
+}
+
+/* AUDIT F3b: the CSV sampler (`tick`) and the live bridge (`decide`) are BOTH
+ * scheduled at t=1.0 s and both re-arm every 100 ms, so they fire at identical
+ * simulation times. Whichever ran first read MeshNodeApp's TX-shadow accumulators and
+ * then called ResetShadow(); the other one read zeros and reset again -- which is why
+ * shadow_exp/shadow_miss/silent_exp/silent_miss were always 0 in live bridge runs.
+ * Read and reset the accumulator exactly ONCE per simulation instant and cache the
+ * values for whoever reads second. Offline (CSV-only) runs are unaffected: `tick` is
+ * then the sole caller, so it still gets one read+reset per 100 ms window. */
+struct ShadowSample
+{
+    int64_t ts{-1};  // Simulator::Now() in time steps; -1 = nothing sampled yet
+    uint32_t shE{0}, shM{0}, siE{0}, siM{0};
+};
+
+static ShadowSample g_shadowSample;
+
+static const ShadowSample&
+SampleShadow(Ptr<MeshNodeApp> me)
+{
+    int64_t now = Simulator::Now().GetTimeStep();
+    if (g_shadowSample.ts != now)
+    {
+        g_shadowSample.ts = now;
+        g_shadowSample.shE = me->ShadowExpected();
+        g_shadowSample.shM = me->ShadowMissed();
+        g_shadowSample.siE = me->SilentExpected();
+        g_shadowSample.siM = me->SilentMissed();
+        me->ResetShadow();
+    }
+    return g_shadowSample;
 }
 
 // --------------------------------------------------------------------------- //
@@ -667,6 +818,9 @@ main(int argc, char* argv[])
     SpectrumWifiPhyHelper phy;
     phy.SetChannel(sc);
     double txp = C.D("node.0.txpower", 16.0);
+    // AUDIT: current agent TX power, tracked across set_tx_power so the bridge state
+    // reports what the radio is actually doing rather than the config value.
+    double curTxp = txp;
     phy.Set("TxPowerStart", DoubleValue(txp));
     phy.Set("TxPowerEnd", DoubleValue(txp));
     phy.Set("RxNoiseFigure", DoubleValue(7.0));
@@ -720,6 +874,10 @@ main(int argc, char* argv[])
         {
             dstIdx = k;
         }
+        if (ids[k] == fsrc)
+        {
+            g_flowSrcIdx = (uint32_t)k;   // AUDIT: data_tx is reported from THIS node
+        }
     }
 
     for (int i = 0; i < N; ++i)
@@ -734,6 +892,13 @@ main(int argc, char* argv[])
                  fbytes,
                  ifs.GetAddress(dstIdx),
                  hasData);
+        if (hasData)
+        {
+            // AUDIT F3d: the mission flow now honours flow.0.start / flow.0.stop,
+            // exactly as background flows (index >= 1) already do below.
+            a->SetDataWindow(Seconds(C.D("flow.0.start", 0.0)),
+                             Seconds(C.D("flow.0.stop", dur)));
+        }
         if (tdmaSlots > 1)
         {
             a->SetTdma(i % tdmaSlots, tdmaSlots, MilliSeconds(100));
@@ -839,8 +1004,28 @@ main(int argc, char* argv[])
             wh.SetTxPowerSpectralDensity(g_psd.CreateTxPowerSpectralDensity(
                 std::pow(10.0, (j.eirp - 30) / 10.0),
                 static_cast<uint8_t>(j.channels.empty() ? 6 : j.channels[0])));
-            wh.SetPhyAttribute("Period", TimeValue(MilliSeconds(10)));
-            wh.SetPhyAttribute("DutyCycle", DoubleValue(j.duty));
+            if (j.type == "reactive")
+            {
+                /* AUDIT F3a(c): WaveformGenerator::Stop() cannot truncate a wave that
+                 * is already radiating -- GenerateWaveform() always emits for exactly
+                 * period * dutyCycle and only the NEXT wave can be cancelled. With the
+                 * default 10 ms period and duty 1.0 every trigger therefore radiated
+                 * 10 ms instead of the configured burst_ms (1.5 ms). Constrain
+                 * period * duty == burst_ms. Duty is held at 0.5 (rather than 1.0 with
+                 * period == burst_ms) so the Stop() scheduled at delay_us + burst_ms
+                 * lands inside the idle half of the period and cleanly cancels the next
+                 * wave, instead of racing a GenerateWaveform() at the same instant. */
+                const double burstMs = std::max(0.05, j.burstMs);
+                wh.SetPhyAttribute(
+                    "Period",
+                    TimeValue(NanoSeconds(static_cast<int64_t>(burstMs * 2.0 * 1e6))));
+                wh.SetPhyAttribute("DutyCycle", DoubleValue(0.5));
+            }
+            else
+            {
+                wh.SetPhyAttribute("Period", TimeValue(MilliSeconds(10)));
+                wh.SetPhyAttribute("DutyCycle", DoubleValue(j.duty));
+            }
             NetDeviceContainer jd = wh.Install(jn.Get(i));
             j.wg = jd.Get(0)
                        ->GetObject<NonCommunicatingNetDevice>()
@@ -867,8 +1052,15 @@ main(int argc, char* argv[])
                 {
                     if (g_jam[k].type == "reactive")
                     {
-                        // armed, but only transmits when triggered by our TX
-                        g_jam[k].on = true;
+                        /* AUDIT F3a(b): this used to run `g_jam[k].on = true;` right
+                         * here, during main() setup and therefore BEFORE
+                         * Simulator::Run() -- the jammer was armed from t=0 and there
+                         * was no clean pre-onset baseline despite truth.onset_t. A
+                         * second, redundant arming via a scheduled lambda followed a
+                         * few lines below; exactly one arming remains, at the
+                         * scheduled onset. Armed only -- a reactive jammer radiates
+                         * from ReactiveTrigger(), not from JamOn(). */
+                        Simulator::Schedule(Seconds(t), &JamArmReactive, k);
                     }
                     else
                     {
@@ -877,12 +1069,6 @@ main(int argc, char* argv[])
                     if (g_jam[k].type == "sweep")
                     {
                         Simulator::Schedule(Seconds(t) + MilliSeconds(g_jam[k].dwellMs), &Sweep, k);
-                    }
-                    if (g_jam[k].type == "reactive")
-                    {
-                        double tt = t;
-                        size_t kk = k;
-                        Simulator::Schedule(Seconds(tt), [kk]() { g_jam[kk].on = true; });
                     }
                 }
                 else
@@ -966,6 +1152,10 @@ main(int argc, char* argv[])
         sah.SetPhyAttribute("Resolution", TimeValue(MicroSeconds(500)));
         sah.SetPhyAttribute("NoisePowerSpectralDensity", DoubleValue(4.14e-21));
         NetDeviceContainer ad = sah.Install(an);
+        // AUDIT F3g: track the agent rather than sitting at its t=0 coordinates.
+        g_agentMob = nodes.Get(g_agentIdx)->GetObject<MobilityModel>();
+        g_analyzerMob = an.Get(0)->GetObject<MobilityModel>();
+        Simulator::ScheduleNow(&SyncAnalyzerPosLoop);
         Ptr<SpectrumAnalyzer> sa =
             ad.Get(0)->GetObject<NonCommunicatingNetDevice>()->GetPhy()->GetObject<SpectrumAnalyzer>();
         sa->TraceConnectWithoutContext("AveragePowerSpectralDensityReport",
@@ -988,6 +1178,10 @@ main(int argc, char* argv[])
     const double beaconHz = 10.0;
     static double lastSample = 0.0;
     static uint32_t lastDataRx = 0;
+    // AUDIT F3e: per-peer sliding window of (sample time, beacons received in that sample),
+    // so the offline CSV reports the same 1 s per-link PDR the live bridge does.
+    constexpr double PDR_WIN_S = 1.0;
+    static std::map<int, std::deque<std::pair<double, uint32_t>>> s_pdrHist;
 
     std::function<void()> tick = [&]() {
         double t = Simulator::Now().GetSeconds();
@@ -1012,8 +1206,25 @@ main(int argc, char* argv[])
             }
             auto it = rc.find(i);
             uint32_t got = (it == rc.end()) ? 0 : it->second;
-            double expect = std::max(1.0, beaconHz * win);
-            double pdr = std::min(1.0, got / expect);
+            /* AUDIT F3e: with a 100 ms sample window and 10 Hz beacons, expect == 1, so
+             * this ratio quantised to {0, 1} -- every per-link PDR in the offline corpus
+             * was binary while the LIVE bridge used a 1 s sliding window and produced a
+             * real fraction. Training and inference therefore saw different distributions
+             * for the most basic feature in the system. Accumulate over the same 1 s
+             * window the bridge uses so the two agree. */
+            s_pdrHist[i].push_back({t, got});
+            while (s_pdrHist[i].size() > 1 && t - s_pdrHist[i].front().first > PDR_WIN_S)
+            {
+                s_pdrHist[i].pop_front();
+            }
+            uint32_t gotWin = 0;
+            for (const auto& e : s_pdrHist[i])
+            {
+                gotWin += e.second;
+            }
+            double span = std::max(0.3, t - s_pdrHist[i].front().first + win);
+            double expect = std::max(1.0, beaconHz * span);
+            double pdr = std::min(1.0, gotWin / expect);
             // only count peers that were ever in range as links
             auto lit = lh.find(i);
             double age = (lit == lh.end()) ? 99.0 : (t - lit->second);
@@ -1121,16 +1332,21 @@ main(int argc, char* argv[])
         sDeferN = g_deferN;
         double deferMs = dDeferN ? dDefer / dDeferN : 0.0;
         uint64_t dAck = (dAtt > dFail) ? (dAtt - dFail) : 0;
-        uint32_t shE = me->ShadowExpected(), shM = me->ShadowMissed();
-        uint32_t siE = me->SilentExpected(), siM = me->SilentMissed();
-        me->ResetShadow();
+        // AUDIT F3b: shared read+reset, so `decide` (same instant) sees the same data.
+        const ShadowSample& sh = SampleShadow(me);
+        uint32_t shE = sh.shE, shM = sh.shM;
+        uint32_t siE = sh.siE, siM = sh.siM;
 
         uint32_t drx = me->DataRxTotal();
         pf << std::fixed << std::setprecision(3) << t << "," << g_curCh << "," << pm << "," << pw << ","
            << ps << "," << nl << "," << degraded << ","
            << (rssiN ? rssiSum / rssiN : -120.0) << ",\"" << rssiS.str() << "\",\"" << pdrS.str()
            << "\"," << g_lastNoise << "," << meas << ",\"" << bp.str() << "\"," << hbMax << ","
-           << apps[0]->DataSent() << "," << (drx - lastDataRx) << "," << g_rxOk << "," << g_rxErr
+           /* AUDIT: was apps[0]->DataSent() regardless of which node the flow source is,
+            * so data_tx read 0 for every scenario whose source is not node 0 -- including
+            * hidden_terminal, where it silently disabled the flow.0.start check. */
+           << apps[g_flowSrcIdx]->DataSent() << "," << (drx - lastDataRx) << "," << g_rxOk
+           << "," << g_rxErr
            << ",\"" << revR.str() << "\",\"" << revP.str() << "\",\"" << revA.str() << "\","
            << dAtt << "," << dAck << "," << std::setprecision(2) << deferMs << ","
            << (dAtt ? double(dFail) * 3.0 / dAtt : 0.0) << ","
@@ -1331,18 +1547,20 @@ main(int argc, char* argv[])
         double bdD = g_deferAccum - bDefer;
         uint32_t bdN = g_deferN - bDeferN;
         bDefer = g_deferAccum; bDeferN = g_deferN;
+        // AUDIT F3b: shared read+reset (see SampleShadow) -- `tick` runs at this same
+        // simulation time and used to consume and clear these counters first.
+        const ShadowSample& bsh = SampleShadow(me);
         js << "],\"rev_rssi\":[" << jrevR.str() << "],\"rev_pdr\":[" << jrevP.str()
            << "],\"rev_age\":[" << jrevA.str() << "],\"tx_att\":" << bdA
            << ",\"tx_ack\":" << (bdA > bdF ? bdA - bdF : 0)
            << ",\"tx_defer_ms\":" << std::setprecision(3) << (bdN ? bdD / bdN : 0.0)
-           << ",\"sh_e\":" << me->ShadowExpected() << ",\"sh_m\":" << me->ShadowMissed()
-           << ",\"si_e\":" << me->SilentExpected() << ",\"si_m\":" << me->SilentMissed()
+           << ",\"sh_e\":" << bsh.shE << ",\"sh_m\":" << bsh.shM
+           << ",\"si_e\":" << bsh.siE << ",\"si_m\":" << bsh.siM
            << ",\"rssi\":[" << rs.str() << "],\"hb\":[" << hb.str() << "],\"band\":["
            << bp.str() << "],\"n_links\":" << nl << ",\"hops_used\":" << g_hops
-           << ",\"tx_power\":" << txp << ",\"retry\":" << std::setprecision(3) << retry
+           << ",\"tx_power\":" << curTxp << ",\"retry\":" << std::setprecision(3) << retry
            << ",\"load\":" << load << ",\"tx_duty\":" << (g_agentTx ? 1.0 : 0.35) << "}";
 
-        me->ResetShadow();
         if (!BridgeSend(js.str()))
         {
             g_sock = -1;
@@ -1379,6 +1597,9 @@ main(int argc, char* argv[])
             Ptr<WifiNetDevice> wd = DynamicCast<WifiNetDevice>(devs.Get(g_agentIdx));
             wd->GetPhy()->SetAttribute("TxPowerStart", DoubleValue(dbm));
             wd->GetPhy()->SetAttribute("TxPowerEnd", DoubleValue(dbm));
+            // AUDIT: keep the reported tx_power in step with the radio, otherwise the
+            // agent can never observe the effect of its own set_tx_power.
+            curTxp = dbm;
         }
         else if (call == "change_tdma_slot")
         {
@@ -1397,6 +1618,7 @@ main(int argc, char* argv[])
             Vector p0 = cv->GetPosition();
             cv->SetPosition(Vector(p0.x + JNum(reply, "dx"), p0.y + JNum(reply, "dy"),
                                    p0.z + JNum(reply, "dz")));
+            SyncAnalyzerPos();   // AUDIT F3g: move the analyzer with the agent
         }
         else if (call == "declare_link_lost")
         {

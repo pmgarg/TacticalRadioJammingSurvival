@@ -1,0 +1,37 @@
+evaluating 125 held-out scenarios (test)
+
+metric                                baseline     teacher     student
+----------------------------------------------------------------------
+classification accuracy                  35.2%      100.0%       51.2%
+expected cost (lower better)             1.408       0.000       0.664
+detection latency median (s)              1.70        0.60        0.70
+censoring rate                           50.4%        0.0%       48.8%
+FP fading->jam (belief)                  0.000       0.000       0.000
+FP fading->jam (ACTED)                   0.000       0.000       0.000
+recovery median (s)                       5.70        5.80        5.70
+survival rate                            53.6%       54.4%       53.6%
+actions consumed (mean)                   0.58        0.47        0.59
+channel hops (mean)                       0.41        0.40        0.42
+refusal gate pass                       100.0%      100.0%      100.0%
+----------------------------------------------------------------------
+baseline     FP gate=PASS  refusal gate=PASS
+teacher      FP gate=PASS  refusal gate=PASS
+student      FP gate=PASS  refusal gate=PASS
+
+per-family classification accuracy
+family            baseline     teacher     student
+barrage              100%        100%        100% 
+congestion           100%        100%        100% 
+fading               100%        100%        100% 
+hidden_term            0%        100%        100% 
+node_loss              0%        100%        100% 
+reactive              57%        100%         86% 
+refusal               93%        100%        100% 
+spot                 100%        100%        100% 
+sweep                  0%        100%          0% 
+
+SEEN families only (excluding the held-out 'sweep')
+metric                                baseline     teacher     student
+classification accuracy                  67.7%      100.0%       98.5%
+expected cost                            1.431       0.000       0.031
+survival rate                            93.8%       95.4%       93.8%

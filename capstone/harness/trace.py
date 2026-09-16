@@ -32,6 +32,11 @@ class DecisionRecord:
     latency_s: float = 0.0
     cache_hit: bool = False
     error: str = ""
+    # The features the teacher actually saw. Without these a trace records WHAT the teacher
+    # said but not WHAT IT SAW, so it can be replayed and audited but never distilled --
+    # which is the one thing the traces exist for (DESIGN v2.0 section 9.5 step 2).
+    features: list = field(default_factory=list)
+    available: list = field(default_factory=list)
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), separators=(",", ":"))

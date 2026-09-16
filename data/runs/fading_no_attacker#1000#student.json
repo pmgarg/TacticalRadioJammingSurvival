@@ -1,0 +1,934 @@
+{
+  "run_id": "fading_no_attacker#1000#student",
+  "task_id": "fading_no_attacker",
+  "agent": "student",
+  "family": "fading",
+  "config": {
+    "scenario": "fading_no_attacker",
+    "seed": 1000,
+    "n_channels": 8,
+    "channel": 6,
+    "nodes": 6,
+    "duration_s": 60.0
+  },
+  "contract_version": "1.2.0",
+  "episode_log": {
+    "episode_id": "fading_no_attacker#1000",
+    "scenario": "fading_no_attacker",
+    "agent": "student",
+    "attack_onset_t": 3.700000000000002,
+    "first_correct_classification_t": null,
+    "classification_trace": [
+      {
+        "t": 4.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 5.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 6.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 7.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 8.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 9.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 10.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 19.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 20.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 21.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 22.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 23.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 24.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 25.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 26.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 27.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 28.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 29.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 30.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 31.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 32.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 33.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": "fading",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 34.0,
+        "top": "fading",
+        "p": 1.0,
+        "declared": null,
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 1.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 1.0
+      }
+    ],
+    "tests_run": [],
+    "actions": [
+      {
+        "t": 4.0,
+        "fn": "set_tx_power",
+        "args": {
+          "dbm": 20
+        },
+        "why": "student: fading (p=1.00); geometry, not an attacker; raise margin, NEVER hop",
+        "expect": "PDR recovers to >=0.8 of baseline within 3 s",
+        "budget_after": 6
+      },
+      {
+        "t": 34.0,
+        "fn": "declare_link_lost",
+        "args": {},
+        "why": "controller failsafe: recovery_timeout",
+        "expect": "",
+        "budget_after": 6
+      }
+    ],
+    "recovery_t": 10.0,
+    "packets_lost": 423.6,
+    "actions_consumed": 0,
+    "hops_consumed": 0,
+    "tests_before_correct_classification": null,
+    "recovered": true,
+    "survived": null,
+    "declared_jamming": false,
+    "declared_lost_t": 34.0,
+    "end_reason": "recovery_timeout",
+    "pdr_series": [
+      [
+        0.0,
+        0.989
+      ],
+      [
+        0.5,
+        0.967
+      ],
+      [
+        1.0,
+        0.718
+      ],
+      [
+        1.5,
+        0.994
+      ],
+      [
+        2.0,
+        0.996
+      ],
+      [
+        2.5,
+        0.959
+      ],
+      [
+        3.0,
+        0.974
+      ],
+      [
+        3.5,
+        0.94
+      ],
+      [
+        4.0,
+        0.857
+      ],
+      [
+        4.5,
+        0.973
+      ],
+      [
+        5.0,
+        0.95
+      ],
+      [
+        5.5,
+        0.955
+      ],
+      [
+        6.0,
+        0.94
+      ],
+      [
+        6.5,
+        0.952
+      ],
+      [
+        7.0,
+        0.964
+      ],
+      [
+        7.5,
+        0.904
+      ],
+      [
+        8.0,
+        0.898
+      ],
+      [
+        8.5,
+        0.838
+      ],
+      [
+        9.0,
+        0.948
+      ],
+      [
+        9.5,
+        0.952
+      ],
+      [
+        10.0,
+        0.909
+      ],
+      [
+        10.5,
+        0.892
+      ],
+      [
+        11.0,
+        0.969
+      ],
+      [
+        11.5,
+        0.938
+      ],
+      [
+        12.0,
+        0.936
+      ],
+      [
+        12.5,
+        0.957
+      ],
+      [
+        13.0,
+        0.867
+      ],
+      [
+        13.5,
+        0.879
+      ],
+      [
+        14.0,
+        0.805
+      ],
+      [
+        14.5,
+        0.947
+      ],
+      [
+        15.0,
+        0.737
+      ],
+      [
+        15.5,
+        0.563
+      ],
+      [
+        16.0,
+        0.817
+      ],
+      [
+        16.5,
+        0.689
+      ],
+      [
+        17.0,
+        0.654
+      ],
+      [
+        17.5,
+        0.647
+      ],
+      [
+        18.0,
+        0.819
+      ],
+      [
+        18.5,
+        0.123
+      ],
+      [
+        19.0,
+        0.005
+      ],
+      [
+        19.5,
+        0.03
+      ],
+      [
+        20.0,
+        0.017
+      ],
+      [
+        20.5,
+        0.008
+      ],
+      [
+        21.0,
+        0.034
+      ],
+      [
+        21.5,
+        0.05
+      ],
+      [
+        22.0,
+        0.022
+      ],
+      [
+        22.5,
+        0.076
+      ],
+      [
+        23.0,
+        0.001
+      ],
+      [
+        23.5,
+        0.123
+      ],
+      [
+        24.0,
+        0.017
+      ],
+      [
+        24.5,
+        0.017
+      ],
+      [
+        25.0,
+        0.025
+      ],
+      [
+        25.5,
+        0.001
+      ],
+      [
+        26.0,
+        0.008
+      ],
+      [
+        26.5,
+        0.138
+      ],
+      [
+        27.0,
+        0.023
+      ],
+      [
+        27.5,
+        0.002
+      ],
+      [
+        28.0,
+        0.004
+      ],
+      [
+        28.5,
+        0.037
+      ],
+      [
+        29.0,
+        0.019
+      ],
+      [
+        29.5,
+        0.033
+      ],
+      [
+        30.0,
+        0.002
+      ],
+      [
+        30.5,
+        0.001
+      ],
+      [
+        31.0,
+        0.001
+      ],
+      [
+        31.5,
+        0.004
+      ],
+      [
+        32.0,
+        0.079
+      ],
+      [
+        32.5,
+        0.026
+      ],
+      [
+        33.0,
+        0.088
+      ],
+      [
+        33.5,
+        0.025
+      ],
+      [
+        34.0,
+        0.002
+      ],
+      [
+        34.5,
+        0.003
+      ],
+      [
+        35.0,
+        0.049
+      ],
+      [
+        35.5,
+        0.007
+      ],
+      [
+        36.0,
+        0.019
+      ],
+      [
+        36.5,
+        0.045
+      ],
+      [
+        37.0,
+        0.004
+      ],
+      [
+        37.5,
+        0.002
+      ],
+      [
+        38.0,
+        0.085
+      ],
+      [
+        38.5,
+        0.007
+      ],
+      [
+        39.0,
+        0.138
+      ],
+      [
+        39.5,
+        0.005
+      ],
+      [
+        40.0,
+        0.001
+      ],
+      [
+        40.5,
+        0.007
+      ],
+      [
+        41.0,
+        0.029
+      ],
+      [
+        41.5,
+        0.024
+      ],
+      [
+        42.0,
+        0.012
+      ],
+      [
+        42.5,
+        0.046
+      ],
+      [
+        43.0,
+        0.053
+      ],
+      [
+        43.5,
+        0.009
+      ],
+      [
+        44.0,
+        0.047
+      ],
+      [
+        44.5,
+        0.004
+      ],
+      [
+        45.0,
+        0.012
+      ],
+      [
+        45.5,
+        0.039
+      ],
+      [
+        46.0,
+        0.051
+      ],
+      [
+        46.5,
+        0.011
+      ],
+      [
+        47.0,
+        0.046
+      ],
+      [
+        47.5,
+        0.052
+      ],
+      [
+        48.0,
+        0.004
+      ],
+      [
+        48.5,
+        0.214
+      ],
+      [
+        49.0,
+        0.017
+      ],
+      [
+        49.5,
+        0.005
+      ],
+      [
+        50.0,
+        0.006
+      ],
+      [
+        50.5,
+        0.014
+      ],
+      [
+        51.0,
+        0.06
+      ],
+      [
+        51.5,
+        0.057
+      ],
+      [
+        52.0,
+        0.034
+      ],
+      [
+        52.5,
+        0.006
+      ],
+      [
+        53.0,
+        0.005
+      ],
+      [
+        53.5,
+        0.019
+      ],
+      [
+        54.0,
+        0.109
+      ],
+      [
+        54.5,
+        0.077
+      ],
+      [
+        55.0,
+        0.021
+      ],
+      [
+        55.5,
+        0.105
+      ],
+      [
+        56.0,
+        0.145
+      ],
+      [
+        56.5,
+        0.029
+      ],
+      [
+        57.0,
+        0.009
+      ],
+      [
+        57.5,
+        0.042
+      ],
+      [
+        58.0,
+        0.004
+      ],
+      [
+        58.5,
+        0.004
+      ],
+      [
+        59.0,
+        0.005
+      ],
+      [
+        59.5,
+        0.014
+      ]
+    ]
+  },
+  "ground_truth": {
+    "cause": "fading",
+    "onset_t": 18.0,
+    "recoverable": true,
+    "notes": ""
+  }
+}

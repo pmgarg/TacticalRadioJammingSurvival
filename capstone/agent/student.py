@@ -18,7 +18,7 @@ import os
 import numpy as np
 
 from .api import Agent, Context, Decision, CAUSES, normalise
-from .teacher import PLAYBOOK
+from .policy_table import PLAYBOOK
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_BUNDLE = os.path.join(HERE, "..", "data", "student", "student_bundle.json")
@@ -104,8 +104,10 @@ class StudentAgent:
         if conf < self.abstain:
             return Decision(belief, "no_op", {}, conf,
                             why="posterior below the calibrated abstain threshold; "
-                                "gathering more evidence rather than acting")
+                                "gathering more evidence rather than acting",
+                            declared=None)
 
+        # `declared` is the cost-rule decision; `belief` stays the honest posterior.
         pa = self.call(x)
         order = np.argsort(-pa)
         for i in order:
@@ -114,8 +116,9 @@ class StudentAgent:
                 return Decision(belief, call, self._args(call, ctx), conf,
                                 why=f"student: {top} (p={conf:.2f}); "
                                     f"{PLAYBOOK.get(top, ('', 'learned policy'))[1]}",
-                                expect="PDR recovers to >=0.8 of baseline within 3 s")
-        return Decision(belief, "no_op", {}, conf, why="no available call")
+                                expect="PDR recovers to >=0.8 of baseline within 3 s",
+                                declared=top)
+        return Decision(belief, "no_op", {}, conf, why="no available call", declared=top)
 
     def _args(self, call: str, ctx: Context) -> dict:
         if call in ("hop_channel", "channel_hop_probe"):

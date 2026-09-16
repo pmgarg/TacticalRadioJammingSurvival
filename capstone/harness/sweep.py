@@ -39,8 +39,8 @@ def make_agent(which: str, bundle: str | None, sc):
         from agent.rule_agent import RuleAgent
         return RuleAgent()
     if which == "oracle":
-        from agent.teacher import TeacherAgent
-        return TeacherAgent(sc.truth.cause, sc.truth.recoverable)
+        from agent.teacher import OracleLabeller
+        return OracleLabeller(sc.truth.cause, sc.truth.recoverable)
     raise ValueError(which)
 
 

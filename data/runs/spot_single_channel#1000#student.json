@@ -1,0 +1,656 @@
+{
+  "run_id": "spot_single_channel#1000#student",
+  "task_id": "spot_single_channel",
+  "agent": "student",
+  "family": "spot",
+  "config": {
+    "scenario": "spot_single_channel",
+    "seed": 1000,
+    "n_channels": 8,
+    "channel": 6,
+    "nodes": 6,
+    "duration_s": 60.0
+  },
+  "contract_version": "1.2.0",
+  "episode_log": {
+    "episode_id": "spot_single_channel#1000",
+    "scenario": "spot_single_channel",
+    "agent": "student",
+    "attack_onset_t": 18.099999999999987,
+    "first_correct_classification_t": null,
+    "classification_trace": [
+      {
+        "t": 19.0,
+        "top": "spot",
+        "p": 0.952,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.048,
+          "spot": 0.952,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 20.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 21.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 22.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 23.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 24.0,
+        "top": "spot",
+        "p": 1.0,
+        "declared": "spot",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 1.0,
+          "reactive": 0.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      }
+    ],
+    "tests_run": [
+      {
+        "t": 19.0,
+        "test": "spectrum_scan",
+        "args": {
+          "dwell_ms": 20
+        },
+        "why": "student: spot (p=0.95); a clean channel exists; move to it"
+      }
+    ],
+    "actions": [
+      {
+        "t": 20.0,
+        "fn": "hop_channel",
+        "args": {
+          "channel": 1
+        },
+        "why": "student: spot (p=1.00); a clean channel exists; move to it",
+        "expect": "PDR recovers to >=0.8 of baseline within 3 s",
+        "budget_after": 6
+      },
+      {
+        "t": 21.0,
+        "fn": "set_tx_power",
+        "args": {
+          "dbm": 20
+        },
+        "why": "student: spot (p=1.00); a clean channel exists; move to it",
+        "expect": "PDR recovers to >=0.8 of baseline within 3 s",
+        "budget_after": 5
+      }
+    ],
+    "recovery_t": 24.0,
+    "packets_lost": 26.9,
+    "actions_consumed": 1,
+    "hops_consumed": 1,
+    "tests_before_correct_classification": null,
+    "recovered": true,
+    "survived": null,
+    "declared_jamming": true,
+    "declared_lost_t": null,
+    "end_reason": "recovered",
+    "pdr_series": [
+      [
+        0.0,
+        0.988
+      ],
+      [
+        0.5,
+        0.988
+      ],
+      [
+        1.0,
+        0.988
+      ],
+      [
+        1.5,
+        0.988
+      ],
+      [
+        2.0,
+        0.988
+      ],
+      [
+        2.5,
+        0.988
+      ],
+      [
+        3.0,
+        0.988
+      ],
+      [
+        3.5,
+        0.988
+      ],
+      [
+        4.0,
+        0.988
+      ],
+      [
+        4.5,
+        0.988
+      ],
+      [
+        5.0,
+        0.988
+      ],
+      [
+        5.5,
+        0.988
+      ],
+      [
+        6.0,
+        0.988
+      ],
+      [
+        6.5,
+        0.988
+      ],
+      [
+        7.0,
+        0.988
+      ],
+      [
+        7.5,
+        0.988
+      ],
+      [
+        8.0,
+        0.988
+      ],
+      [
+        8.5,
+        0.988
+      ],
+      [
+        9.0,
+        0.988
+      ],
+      [
+        9.5,
+        0.988
+      ],
+      [
+        10.0,
+        0.988
+      ],
+      [
+        10.5,
+        0.988
+      ],
+      [
+        11.0,
+        0.988
+      ],
+      [
+        11.5,
+        0.988
+      ],
+      [
+        12.0,
+        0.988
+      ],
+      [
+        12.5,
+        0.988
+      ],
+      [
+        13.0,
+        0.988
+      ],
+      [
+        13.5,
+        0.988
+      ],
+      [
+        14.0,
+        0.988
+      ],
+      [
+        14.5,
+        0.988
+      ],
+      [
+        15.0,
+        0.988
+      ],
+      [
+        15.5,
+        0.988
+      ],
+      [
+        16.0,
+        0.988
+      ],
+      [
+        16.5,
+        0.988
+      ],
+      [
+        17.0,
+        0.988
+      ],
+      [
+        17.5,
+        0.988
+      ],
+      [
+        18.0,
+        0.988
+      ],
+      [
+        18.5,
+        0.016
+      ],
+      [
+        19.0,
+        0.016
+      ],
+      [
+        19.5,
+        0.016
+      ],
+      [
+        20.0,
+        0.016
+      ],
+      [
+        20.5,
+        0.987
+      ],
+      [
+        21.0,
+        0.987
+      ],
+      [
+        21.5,
+        0.987
+      ],
+      [
+        22.0,
+        0.987
+      ],
+      [
+        22.5,
+        0.987
+      ],
+      [
+        23.0,
+        0.987
+      ],
+      [
+        23.5,
+        0.987
+      ],
+      [
+        24.0,
+        0.987
+      ],
+      [
+        24.5,
+        0.987
+      ],
+      [
+        25.0,
+        0.987
+      ],
+      [
+        25.5,
+        0.987
+      ],
+      [
+        26.0,
+        0.987
+      ],
+      [
+        26.5,
+        0.987
+      ],
+      [
+        27.0,
+        0.987
+      ],
+      [
+        27.5,
+        0.987
+      ],
+      [
+        28.0,
+        0.987
+      ],
+      [
+        28.5,
+        0.987
+      ],
+      [
+        29.0,
+        0.987
+      ],
+      [
+        29.5,
+        0.987
+      ],
+      [
+        30.0,
+        0.987
+      ],
+      [
+        30.5,
+        0.987
+      ],
+      [
+        31.0,
+        0.987
+      ],
+      [
+        31.5,
+        0.987
+      ],
+      [
+        32.0,
+        0.987
+      ],
+      [
+        32.5,
+        0.987
+      ],
+      [
+        33.0,
+        0.987
+      ],
+      [
+        33.5,
+        0.987
+      ],
+      [
+        34.0,
+        0.987
+      ],
+      [
+        34.5,
+        0.987
+      ],
+      [
+        35.0,
+        0.987
+      ],
+      [
+        35.5,
+        0.987
+      ],
+      [
+        36.0,
+        0.987
+      ],
+      [
+        36.5,
+        0.987
+      ],
+      [
+        37.0,
+        0.987
+      ],
+      [
+        37.5,
+        0.987
+      ],
+      [
+        38.0,
+        0.987
+      ],
+      [
+        38.5,
+        0.987
+      ],
+      [
+        39.0,
+        0.987
+      ],
+      [
+        39.5,
+        0.987
+      ],
+      [
+        40.0,
+        0.987
+      ],
+      [
+        40.5,
+        0.987
+      ],
+      [
+        41.0,
+        0.987
+      ],
+      [
+        41.5,
+        0.987
+      ],
+      [
+        42.0,
+        0.987
+      ],
+      [
+        42.5,
+        0.987
+      ],
+      [
+        43.0,
+        0.987
+      ],
+      [
+        43.5,
+        0.987
+      ],
+      [
+        44.0,
+        0.987
+      ],
+      [
+        44.5,
+        0.987
+      ],
+      [
+        45.0,
+        0.987
+      ],
+      [
+        45.5,
+        0.987
+      ],
+      [
+        46.0,
+        0.987
+      ],
+      [
+        46.5,
+        0.987
+      ],
+      [
+        47.0,
+        0.987
+      ],
+      [
+        47.5,
+        0.987
+      ],
+      [
+        48.0,
+        0.987
+      ],
+      [
+        48.5,
+        0.987
+      ],
+      [
+        49.0,
+        0.987
+      ],
+      [
+        49.5,
+        0.987
+      ],
+      [
+        50.0,
+        0.987
+      ],
+      [
+        50.5,
+        0.987
+      ],
+      [
+        51.0,
+        0.987
+      ],
+      [
+        51.5,
+        0.987
+      ],
+      [
+        52.0,
+        0.987
+      ],
+      [
+        52.5,
+        0.987
+      ],
+      [
+        53.0,
+        0.987
+      ],
+      [
+        53.5,
+        0.987
+      ],
+      [
+        54.0,
+        0.987
+      ],
+      [
+        54.5,
+        0.987
+      ],
+      [
+        55.0,
+        0.987
+      ],
+      [
+        55.5,
+        0.987
+      ],
+      [
+        56.0,
+        0.987
+      ],
+      [
+        56.5,
+        0.987
+      ],
+      [
+        57.0,
+        0.987
+      ],
+      [
+        57.5,
+        0.987
+      ],
+      [
+        58.0,
+        0.987
+      ],
+      [
+        58.5,
+        0.987
+      ],
+      [
+        59.0,
+        0.987
+      ],
+      [
+        59.5,
+        0.987
+      ]
+    ]
+  },
+  "ground_truth": {
+    "cause": "spot",
+    "onset_t": 18.0,
+    "recoverable": true,
+    "notes": ""
+  }
+}

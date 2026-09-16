@@ -278,6 +278,8 @@ class HarnessAgent:
         call, args, note = self.reg.validate(str(d.get("call", "no_op")),
                                              d.get("args") or {}, ctx.available)
 
+        rec.features = [round(float(x), 6) for x in features]
+        rec.available = list(ctx.available)
         rec.belief, rec.call, rec.args = belief, call, args
         rec.confidence = _f(d.get("confidence", 0.0))
         rec.why = str(d.get("why", ""))[:400]

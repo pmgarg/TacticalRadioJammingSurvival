@@ -84,11 +84,11 @@ def _episode(agent_factory, family: str, seed: int = 3):
 
 @check("L5", "oracle teacher -> controller -> refsim")
 def l5():
-    from agent.teacher import TeacherAgent
+    from agent.teacher import OracleLabeller
     hits = 0
     fams = ["barrage", "spot", "fading", "node_loss", "congestion"]
     for fam in fams:
-        _, s = _episode(lambda sc: TeacherAgent(sc.truth.cause, sc.truth.recoverable), fam)
+        _, s = _episode(lambda sc: OracleLabeller(sc.truth.cause, sc.truth.recoverable), fam)
         hits += int(s.classification_ok)
     return hits == len(fams), f"{hits}/{len(fams)} correct"
 
@@ -120,8 +120,8 @@ def l9():
 
 @check("L13", "episode -> verifier -> scored metrics")
 def l13():
-    from agent.teacher import TeacherAgent
-    log, s = _episode(lambda sc: TeacherAgent(sc.truth.cause, sc.truth.recoverable), "fading")
+    from agent.teacher import OracleLabeller
+    log, s = _episode(lambda sc: OracleLabeller(sc.truth.cause, sc.truth.recoverable), "fading")
     ok = (s.declared_cause is not None) and isinstance(s.expected_cost, float)
     return ok, (f"declared={s.declared_cause} cost={s.expected_cost:.3f} "
                 f"fp={s.false_positive} fp_acted={s.false_positive_acted}")

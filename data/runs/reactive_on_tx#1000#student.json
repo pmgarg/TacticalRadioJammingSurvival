@@ -1,0 +1,763 @@
+{
+  "run_id": "reactive_on_tx#1000#student",
+  "task_id": "reactive_on_tx",
+  "agent": "student",
+  "family": "reactive",
+  "config": {
+    "scenario": "reactive_on_tx",
+    "seed": 1000,
+    "n_channels": 8,
+    "channel": 6,
+    "nodes": 6,
+    "duration_s": 60.0
+  },
+  "contract_version": "1.2.0",
+  "episode_log": {
+    "episode_id": "reactive_on_tx#1000",
+    "scenario": "reactive_on_tx",
+    "agent": "student",
+    "attack_onset_t": 18.099999999999987,
+    "first_correct_classification_t": null,
+    "classification_trace": [
+      {
+        "t": 19.0,
+        "top": "reactive",
+        "p": 1.0,
+        "declared": "reactive",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 1.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 20.0,
+        "top": "reactive",
+        "p": 1.0,
+        "declared": "reactive",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 1.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 21.0,
+        "top": "reactive",
+        "p": 1.0,
+        "declared": "reactive",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 1.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 22.0,
+        "top": "reactive",
+        "p": 1.0,
+        "declared": "reactive",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 1.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 24.0,
+        "top": "reactive",
+        "p": 1.0,
+        "declared": "reactive",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 1.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 36.0,
+        "top": "reactive",
+        "p": 1.0,
+        "declared": "reactive",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 1.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 38.0,
+        "top": "reactive",
+        "p": 1.0,
+        "declared": "reactive",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 1.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 39.0,
+        "top": "reactive",
+        "p": 1.0,
+        "declared": "reactive",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 1.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 41.0,
+        "top": "reactive",
+        "p": 1.0,
+        "declared": "reactive",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 1.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 43.0,
+        "top": "reactive",
+        "p": 1.0,
+        "declared": "reactive",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 1.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 44.0,
+        "top": "reactive",
+        "p": 1.0,
+        "declared": "reactive",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 1.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 47.0,
+        "top": "reactive",
+        "p": 1.0,
+        "declared": "reactive",
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 1.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 0.0
+      },
+      {
+        "t": 49.0,
+        "top": "reactive",
+        "p": 1.0,
+        "declared": null,
+        "belief": {
+          "barrage": 0.0,
+          "spot": 0.0,
+          "reactive": 1.0,
+          "sweep": 0.0,
+          "fading": 0.0,
+          "node_loss": 0.0,
+          "congestion": 0.0,
+          "hidden_term": 0.0
+        },
+        "unrecoverable": 1.0
+      }
+    ],
+    "tests_run": [
+      {
+        "t": 19.0,
+        "test": "silent_listen",
+        "args": {
+          "duration_ms": 200
+        },
+        "why": "student: reactive (p=1.00); deny the jammer its trigger; do NOT hop"
+      }
+    ],
+    "actions": [
+      {
+        "t": 49.0,
+        "fn": "declare_link_lost",
+        "args": {},
+        "why": "controller failsafe: recovery_timeout",
+        "expect": "",
+        "budget_after": 6
+      }
+    ],
+    "recovery_t": 22.0,
+    "packets_lost": 94.5,
+    "actions_consumed": 0,
+    "hops_consumed": 0,
+    "tests_before_correct_classification": null,
+    "recovered": true,
+    "survived": null,
+    "declared_jamming": true,
+    "declared_lost_t": 49.0,
+    "end_reason": "recovery_timeout",
+    "pdr_series": [
+      [
+        0.0,
+        0.988
+      ],
+      [
+        0.5,
+        0.988
+      ],
+      [
+        1.0,
+        0.988
+      ],
+      [
+        1.5,
+        0.988
+      ],
+      [
+        2.0,
+        0.988
+      ],
+      [
+        2.5,
+        0.988
+      ],
+      [
+        3.0,
+        0.988
+      ],
+      [
+        3.5,
+        0.988
+      ],
+      [
+        4.0,
+        0.988
+      ],
+      [
+        4.5,
+        0.988
+      ],
+      [
+        5.0,
+        0.988
+      ],
+      [
+        5.5,
+        0.988
+      ],
+      [
+        6.0,
+        0.988
+      ],
+      [
+        6.5,
+        0.988
+      ],
+      [
+        7.0,
+        0.988
+      ],
+      [
+        7.5,
+        0.988
+      ],
+      [
+        8.0,
+        0.988
+      ],
+      [
+        8.5,
+        0.988
+      ],
+      [
+        9.0,
+        0.988
+      ],
+      [
+        9.5,
+        0.988
+      ],
+      [
+        10.0,
+        0.988
+      ],
+      [
+        10.5,
+        0.988
+      ],
+      [
+        11.0,
+        0.988
+      ],
+      [
+        11.5,
+        0.988
+      ],
+      [
+        12.0,
+        0.988
+      ],
+      [
+        12.5,
+        0.988
+      ],
+      [
+        13.0,
+        0.988
+      ],
+      [
+        13.5,
+        0.988
+      ],
+      [
+        14.0,
+        0.988
+      ],
+      [
+        14.5,
+        0.988
+      ],
+      [
+        15.0,
+        0.988
+      ],
+      [
+        15.5,
+        0.988
+      ],
+      [
+        16.0,
+        0.988
+      ],
+      [
+        16.5,
+        0.988
+      ],
+      [
+        17.0,
+        0.988
+      ],
+      [
+        17.5,
+        0.988
+      ],
+      [
+        18.0,
+        0.988
+      ],
+      [
+        18.5,
+        0.988
+      ],
+      [
+        19.0,
+        0.988
+      ],
+      [
+        19.5,
+        0.988
+      ],
+      [
+        20.0,
+        0.988
+      ],
+      [
+        20.5,
+        0.009
+      ],
+      [
+        21.0,
+        0.988
+      ],
+      [
+        21.5,
+        0.988
+      ],
+      [
+        22.0,
+        0.988
+      ],
+      [
+        22.5,
+        0.988
+      ],
+      [
+        23.0,
+        0.988
+      ],
+      [
+        23.5,
+        0.988
+      ],
+      [
+        24.0,
+        0.009
+      ],
+      [
+        24.5,
+        0.988
+      ],
+      [
+        25.0,
+        0.988
+      ],
+      [
+        25.5,
+        0.009
+      ],
+      [
+        26.0,
+        0.988
+      ],
+      [
+        26.5,
+        0.988
+      ],
+      [
+        27.0,
+        0.988
+      ],
+      [
+        27.5,
+        0.009
+      ],
+      [
+        28.0,
+        0.988
+      ],
+      [
+        28.5,
+        0.988
+      ],
+      [
+        29.0,
+        0.988
+      ],
+      [
+        29.5,
+        0.988
+      ],
+      [
+        30.0,
+        0.988
+      ],
+      [
+        30.5,
+        0.988
+      ],
+      [
+        31.0,
+        0.988
+      ],
+      [
+        31.5,
+        0.988
+      ],
+      [
+        32.0,
+        0.988
+      ],
+      [
+        32.5,
+        0.988
+      ],
+      [
+        33.0,
+        0.988
+      ],
+      [
+        33.5,
+        0.988
+      ],
+      [
+        34.0,
+        0.988
+      ],
+      [
+        34.5,
+        0.988
+      ],
+      [
+        35.0,
+        0.988
+      ],
+      [
+        35.5,
+        0.988
+      ],
+      [
+        36.0,
+        0.009
+      ],
+      [
+        36.5,
+        0.988
+      ],
+      [
+        37.0,
+        0.988
+      ],
+      [
+        37.5,
+        0.009
+      ],
+      [
+        38.0,
+        0.009
+      ],
+      [
+        38.5,
+        0.988
+      ],
+      [
+        39.0,
+        0.009
+      ],
+      [
+        39.5,
+        0.009
+      ],
+      [
+        40.0,
+        0.988
+      ],
+      [
+        40.5,
+        0.009
+      ],
+      [
+        41.0,
+        0.009
+      ],
+      [
+        41.5,
+        0.988
+      ],
+      [
+        42.0,
+        0.988
+      ],
+      [
+        42.5,
+        0.988
+      ],
+      [
+        43.0,
+        0.009
+      ],
+      [
+        43.5,
+        0.988
+      ],
+      [
+        44.0,
+        0.009
+      ],
+      [
+        44.5,
+        0.988
+      ],
+      [
+        45.0,
+        0.988
+      ],
+      [
+        45.5,
+        0.988
+      ],
+      [
+        46.0,
+        0.988
+      ],
+      [
+        46.5,
+        0.009
+      ],
+      [
+        47.0,
+        0.009
+      ],
+      [
+        47.5,
+        0.988
+      ],
+      [
+        48.0,
+        0.988
+      ],
+      [
+        48.5,
+        0.009
+      ],
+      [
+        49.0,
+        0.009
+      ],
+      [
+        49.5,
+        0.988
+      ],
+      [
+        50.0,
+        0.988
+      ],
+      [
+        50.5,
+        0.988
+      ],
+      [
+        51.0,
+        0.988
+      ],
+      [
+        51.5,
+        0.988
+      ],
+      [
+        52.0,
+        0.988
+      ],
+      [
+        52.5,
+        0.988
+      ],
+      [
+        53.0,
+        0.988
+      ],
+      [
+        53.5,
+        0.988
+      ],
+      [
+        54.0,
+        0.988
+      ],
+      [
+        54.5,
+        0.988
+      ],
+      [
+        55.0,
+        0.988
+      ],
+      [
+        55.5,
+        0.988
+      ],
+      [
+        56.0,
+        0.988
+      ],
+      [
+        56.5,
+        0.988
+      ],
+      [
+        57.0,
+        0.988
+      ],
+      [
+        57.5,
+        0.988
+      ],
+      [
+        58.0,
+        0.988
+      ],
+      [
+        58.5,
+        0.988
+      ],
+      [
+        59.0,
+        0.988
+      ],
+      [
+        59.5,
+        0.988
+      ]
+    ]
+  },
+  "ground_truth": {
+    "cause": "reactive",
+    "onset_t": 18.0,
+    "recoverable": true,
+    "notes": ""
+  }
+}

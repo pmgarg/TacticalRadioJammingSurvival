@@ -126,7 +126,7 @@ def render_state(f: list[float], ctx: Context) -> str:
     return "\n".join(lines)
 
 
-class LlmTeacherAgent:
+class LlmOracleLabeller:
     """The brief's teacher: a large model, offline, in simulation, no ground truth."""
     name = "llm_teacher"
 

@@ -1,5 +1,5 @@
 {
-  "contract_version": "1.1.0",
+  "contract_version": "1.2.0",
   "description": "Frozen interface between the world (ns-3 / refsim), the percept layer, the agent, and the verifier. Changing this is a breaking change for four subsystems.",
   "hypotheses": [
     {
@@ -94,28 +94,6 @@
       "separates": [
         "jamming|congestion",
         "barrage|spot|sweep"
-      ]
-    },
-    "listen_test": {
-      "cost": 2,
-      "budget": 0,
-      "duration_ms": 100,
-      "args": {
-        "peer": "int"
-      },
-      "separates": [
-        "own_rx|channel"
-      ]
-    },
-    "transmit_probe": {
-      "cost": 2,
-      "budget": 0,
-      "duration_ms": 100,
-      "args": {
-        "peer": "int"
-      },
-      "separates": [
-        "own_tx|channel"
       ]
     },
     "neighbor_probe": {
@@ -255,5 +233,6 @@
     "reciprocal_link_report": "each beacon carries this node's measured (rssi,pdr) for each neighbour it hears; receivers extract the entry about themselves to learn the REVERSE link",
     "tx_shadow_tau_ms": 3.0,
     "notes": "see TELEMETRY.md - every quantity is obtainable on ESP32 as well as ns-3"
-  }
+  },
+  "_removed_calls_note": "listen_test and transmit_probe were removed per DESIGN v2.0 A13: tests/test_contract_effects.py showed they changed nothing in any family, in any simulator. A contract that advertises a cost and a 'separates' claim for a call the world ignores makes the agent pay budget for evidence that never arrives. Re-add them together with an implementation, not before."
 }

@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jamming Survival — run dashboard</title>
+<style>
+  :root{
+    color-scheme: light;
+    --surface-0:#f4f3f0; --surface-1:#fcfcfb; --surface-2:#eeede9;
+    --line:#dcdbd5; --line-strong:#b9b8b0;
+    --ink:#0b0b0b; --ink-2:#52514e; --ink-3:#7d7c76;
+    --good:#1a7f4f; --bad:#c0392b; --warn:#b07800;
+    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+    --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --surface-0:#121211; --surface-1:#1a1a19; --surface-2:#242423;
+      --line:#343433; --line-strong:#4d4d4a;
+      --ink:#ffffff; --ink-2:#c3c2b7; --ink-3:#8e8d85;
+      --good:#4cc38a; --bad:#e66767; --warn:#d9a441;
+      --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+      --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --surface-0:#121211; --surface-1:#1a1a19; --surface-2:#242423;
+    --line:#343433; --line-strong:#4d4d4a;
+    --ink:#ffffff; --ink-2:#c3c2b7; --ink-3:#8e8d85;
+    --good:#4cc38a; --bad:#e66767; --warn:#d9a441;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface-0);color:var(--ink);
+       font:14px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--surface-1);
+         display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+  h1{font-size:15px;margin:0;font-weight:650;letter-spacing:-.01em}
+  .sub{color:var(--ink-3);font-size:12px}
+  header .spacer{flex:1}
+  button{font:inherit;font-size:12px;padding:5px 11px;border:1px solid var(--line-strong);
+         border-radius:7px;background:var(--surface-2);color:var(--ink);cursor:pointer}
+  button:hover{border-color:var(--ink-3)}
+  button[aria-pressed="true"]{background:var(--ink);color:var(--surface-1);border-color:var(--ink)}
+
+  .strip{display:flex;gap:10px;flex-wrap:wrap;padding:14px 20px 0}
+  .tile{background:var(--surface-1);border:1px solid var(--line);border-radius:10px;
+        padding:10px 14px;min-width:112px}
+  .tile .k{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em}
+  .tile .v{font-size:21px;font-weight:600;letter-spacing:-.02em;margin-top:2px}
+  .tile .v small{font-size:12px;font-weight:400;color:var(--ink-3)}
+
+  main{display:grid;grid-template-columns:290px minmax(0,1fr);gap:16px;padding:14px 20px 40px;
+       align-items:start}
+  @media (max-width:860px){main{grid-template-columns:1fr}}
+
+  .panel{background:var(--surface-1);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .panel h2{font-size:12px;margin:0;padding:10px 14px;border-bottom:1px solid var(--line);
+            color:var(--ink-2);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+  .panel .body{padding:14px}
+
+  .runlist{max-height:72vh;overflow:auto}
+  .run{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);
+       border-radius:0;background:transparent;padding:9px 14px;cursor:pointer}
+  .run:hover{background:var(--surface-2)}
+  .run[aria-pressed="true"]{background:var(--surface-2);box-shadow:inset 3px 0 0 var(--ink)}
+  .run .r1{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .run .fam{font-weight:600;font-size:13px}
+  .run .r2{color:var(--ink-3);font-size:11px;margin-top:1px}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex:none}
+  .ok{background:var(--good)} .no{background:var(--bad)}
+
+  .facts{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  .fact{border:1px solid var(--line);border-radius:9px;padding:8px 12px;background:var(--surface-2)}
+  .fact .k{font-size:11px;color:var(--ink-3)} .fact .v{font-weight:600;margin-top:1px}
+  .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;
+        border:1px solid currentColor}
+  .pill.g{color:var(--good)} .pill.b{color:var(--bad)} .pill.n{color:var(--ink-3)}
+
+  figure{margin:0 0 18px}
+  figcaption{font-size:12px;color:var(--ink-2);margin-bottom:8px}
+  figcaption b{color:var(--ink);font-weight:600}
+  .chart{overflow-x:auto;overflow-y:hidden;padding-bottom:2px}
+  .chart svg{display:block;width:100%;min-width:620px;height:auto;overflow:visible}
+  .grid{stroke:var(--line);stroke-width:1}
+  .axis{stroke:var(--line-strong);stroke-width:1}
+  .tick{fill:var(--ink-3);font-size:10px}
+  .onset{stroke:var(--ink-3);stroke-width:1.5;stroke-dasharray:3 3}
+  .lbl{fill:var(--ink-2);font-size:10.5px}
+  .lbl-strong{fill:var(--ink);font-size:10.5px;font-weight:600}
+
+  .legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin:2px 0 10px}
+  .legend span{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-2)}
+  .swatch{width:10px;height:10px;border-radius:3px;flex:none}
+
+  table{border-collapse:collapse;width:100%;min-width:680px;font-size:12px}
+  th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--ink-3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .why{color:var(--ink-2)}
+  .scroll{overflow-x:auto}
+  .empty{color:var(--ink-3);padding:20px;text-align:center}
+  #tip{position:fixed;pointer-events:none;z-index:9;background:var(--surface-1);color:var(--ink);
+       border:1px solid var(--line-strong);border-radius:8px;padding:7px 10px;font-size:11.5px;
+       box-shadow:0 4px 14px rgba(0,0,0,.18);max-width:260px}
+  #tip[hidden]{display:none!important}
+  .kv{display:grid;grid-template-columns:auto auto;gap:1px 10px}
+  .kv i{font-style:normal;color:var(--ink-3)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Jamming Survival — run dashboard</h1>
+  <span class="sub" id="runsdir"></span>
+  <span class="spacer"></span>
+  <button id="tableToggle" aria-pressed="false">Table view</button>
+  <button id="themeToggle">Theme</button>
+  <button id="reload">Reload</button>
+</header>
+
+<div class="strip" id="strip"></div>
+
+<main>
+  <section class="panel">
+    <h2>Episodes</h2>
+    <div class="runlist" id="runlist"><div class="empty">loading…</div></div>
+  </section>
+
+  <section class="panel">
+    <h2 id="detailTitle">Episode</h2>
+    <div class="body" id="detail"><div class="empty">Select an episode.</div></div>
+  </section>
+</main>
+
+<div id="tip" hidden></div>
+
+<script>
+"use strict";
+
+/* Causes keep a FIXED colour slot, keyed by identity — never by rank, never cycled.
+   Filtering the list must not repaint the survivors. Slot order is the validated
+   categorical order from the project's palette. */
+const CAUSES = ["barrage","spot","reactive","sweep","fading","node_loss","congestion","hidden_term"];
+const SLOT   = {barrage:"--s1", spot:"--s2", reactive:"--s3", sweep:"--s4",
+                fading:"--s5", node_loss:"--s6", congestion:"--s7", hidden_term:"--s8"};
+const col = c => `var(${SLOT[c] || "--ink-3"})`;
+
+const $  = s => document.querySelector(s);
+const el = (t,a={},kids=[]) => { const n=document.createElementNS("http://www.w3.org/2000/svg",t);
+  for(const k in a) n.setAttribute(k,a[k]); kids.forEach(c=>n.appendChild(c)); return n; };
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const f2  = v => (v==null||Number.isNaN(v)) ? "—" : (+v).toFixed(2);
+const pc  = v => (v==null||Number.isNaN(v)) ? "—" : Math.round(v*100)+"%";
+
+let STATE = { rows: [], sel: null, tableView: false };
+
+/* ---------------------------------------------------------------- data */
+async function j(u){ const r = await fetch(u); if(!r.ok) throw new Error(u+" → "+r.status); return r.json(); }
+
+async function boot(){
+  try{
+    const [runs, sum] = await Promise.all([j("/api/runs"), j("/api/summary")]);
+    STATE.rows = runs.rows;
+    $("#runsdir").textContent = runs.runs_dir;
+    drawStrip(sum);
+    drawList();
+    if (STATE.rows.length) select(STATE.sel && STATE.rows.some(r=>r.run_id===STATE.sel)
+                                  ? STATE.sel : STATE.rows[0].run_id);
+  }catch(e){
+    $("#runlist").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+/* ------------------------------------------------------------ summary */
+function drawStrip(s){
+  if(!s || !s.n){ $("#strip").innerHTML = `<div class="tile"><div class="k">records</div><div class="v">0</div></div>`; return; }
+  const o = s.overall || {};
+  const g = s.gates || {};
+  const tile = (k,v,sub="") => `<div class="tile"><div class="k">${esc(k)}</div>
+      <div class="v">${v}${sub?` <small>${esc(sub)}</small>`:""}</div></div>`;
+  const gate = (k,gg) => {
+    if(!gg) return `<div class="tile"><div class="k">${esc(k)}</div><div class="v">—</div></div>`;
+    const na = gg.applicable === false;   /* nothing to measure is N/A, never FAIL */
+    const c  = na ? "var(--ink-3)" : (gg.pass ? "var(--good)" : "var(--bad)");
+    return `<div class="tile"><div class="k">${esc(k)}</div>
+      <div class="v" style="color:${c}">${na ? "n/a" : (gg.pass?"PASS":"FAIL")}
+      <small>${na ? esc(gg.note||"") : f2(gg.value)}</small></div></div>`;
+  };
+  $("#strip").innerHTML =
+      tile("episodes", s.n)
+    + tile("classification", pc(o.classification_accuracy))
+    + tile("expected cost", f2(o.expected_cost_mean))
+    + tile("survival", pc(o.survival_rate))
+    + tile("FP fading-as-jam", f2(o.fp_fading_acted), "acted")
+    + gate("FP gate", g.false_positive_gate)
+    + gate("refusal gate", g.refusal_gate);
+}
+
+/* --------------------------------------------------------------- list */
+function drawList(){
+  const box = $("#runlist");
+  if(!STATE.rows.length){ box.innerHTML = `<div class="empty">No records yet.<br><code class="mono">python3 run_episode.py --corpus --out ../data/runs</code></div>`; return; }
+  box.innerHTML = "";
+  for(const r of STATE.rows){
+    const b = document.createElement("button");
+    b.className = "run"; b.type = "button";
+    b.setAttribute("aria-pressed", String(r.run_id === STATE.sel));
+    b.innerHTML = `<span class="r1">
+        <span class="fam"><span class="dot ${r.classification_ok?"ok":"no"}"></span> ${esc(r.family)}</span>
+        <span class="mono" style="color:var(--ink-3)">${f2(r.expected_cost)}</span></span>
+      <span class="r2">${esc(r.agent)} · seed ${esc(r.seed)} · said <b>${esc(r.declared_cause||"—")}</b></span>`;
+    b.onclick = () => select(r.run_id);
+    box.appendChild(b);
+  }
+}
+
+async function select(id){
+  STATE.sel = id;
+  drawList();
+  $("#detailTitle").textContent = id;
+  try{ drawDetail(await j("/api/run/"+encodeURIComponent(id))); }
+  catch(e){ $("#detail").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+/* ------------------------------------------------------------- detail */
+function drawDetail(d){
+  const rec = d.record, s = d.score, log = rec.episode_log, gt = rec.ground_truth;
+  const dur = (rec.config && rec.config.duration_s) || 60;
+  const host = $("#detail");
+  host.innerHTML = "";
+
+  const pill = (txt,cls) => `<span class="pill ${cls}">${esc(txt)}</span>`;
+  const fact = (k,v) => `<div class="fact"><div class="k">${esc(k)}</div><div class="v">${v}</div></div>`;
+  const facts = document.createElement("div");
+  facts.className = "facts";
+  facts.innerHTML =
+      fact("truth", `<span style="color:${col(gt.cause)}">●</span> ${esc(gt.cause)}`)
+    + fact("declared", (s.declared_cause
+          ? `<span style="color:${col(s.declared_cause)}">●</span> ${esc(s.declared_cause)}`
+          : "—") + " " + (s.classification_ok?pill("correct","g"):pill("wrong","b")))
+    + fact("detection latency", s.censored ? pill("censored","n") : f2(s.detection_latency_s)+" s")
+    + fact("recovery", s.recovery_time_s==null ? "—" : f2(s.recovery_time_s)+" s")
+    + fact("actions / hops", `${s.actions_consumed} / ${s.hops_consumed}`)
+    + fact("expected cost", f2(s.expected_cost))
+    + fact("survived", s.survived?pill("yes","g"):pill("no","b"))
+    + (s.refusal_required ? fact("refusal", s.refusal_ok?pill("ok","g"):pill("missed","b")) : "")
+    + (gt.cause==="fading" ? fact("FP acted", s.false_positive_acted?pill("YES","b"):pill("no","g")) : "");
+  host.appendChild(facts);
+
+  const trace = log.classification_trace || [];
+  const acts  = log.actions || [];
+  const onset = gt.onset_t;
+
+  host.appendChild(beliefFigure(trace, acts, onset, dur, gt.cause));
+  host.appendChild(pdrFigure(log.pdr_series || [], acts, onset, log.recovery_t, dur));
+  host.appendChild(callsTable(log.tests_run || [], acts));
+  if(STATE.tableView) host.appendChild(beliefTable(trace));
+}
+
+/* ---- geometry shared by both charts, so they read against one clock ---- */
+const W = 760, PADL = 42, PADR = 14;
+const xOf = (t, dur) => PADL + (PADR!==null ? (W-PADL-PADR) : 0) * (Math.max(0,Math.min(dur,t))/dur);
+
+function timeAxis(g, dur, y, h){
+  const step = dur <= 30 ? 5 : 10;
+  for(let t=0; t<=dur+1e-9; t+=step){
+    const x = xOf(t,dur);
+    g.appendChild(el("line",{x1:x,x2:x,y1:y,y2:y+h,class:"grid"}));
+    g.appendChild(el("text",{x:x,y:y+h+13,"text-anchor":"middle",class:"tick"},[txt(t+"s")]));
+  }
+  g.appendChild(el("line",{x1:PADL,x2:W-PADR,y1:y+h,y2:y+h,class:"axis"}));
+}
+const txt = s => document.createTextNode(String(s));
+
+function onsetMark(g, onset, dur, y, h, label){
+  if(onset==null) return;
+  const x = xOf(onset,dur);
+  g.appendChild(el("line",{x1:x,x2:x,y1:y,y2:y+h,class:"onset"}));
+  /* the word lives in the figcaption; the line alone marks it on both charts */
+}
+
+/* ---------------------------------------------- belief over time ---- */
+function beliefFigure(trace, acts, onset, dur, trueCause){
+  const H = 190, TOP = 10, PLOT = H - TOP - 22;
+  const fig = document.createElement("figure");
+
+  const cap = document.createElement("figcaption");
+  cap.innerHTML = `<b>Belief over time.</b> Posterior across the eight causes at each 1 Hz decision.
+     Truth is <span style="color:${col(trueCause)}">●</span> <b>${esc(trueCause)}</b> — the question is whether
+     the mass moves there, and how fast. Dashed line: attack onset${onset!=null?" at "+(+onset).toFixed(0)+" s":""}.`;
+  fig.appendChild(cap);
+
+  const seen = new Set();
+  trace.forEach(r => CAUSES.forEach(c => { if((r.belief||{})[c] >= 0.05) seen.add(c); }));
+  const lg = document.createElement("div"); lg.className = "legend";
+  lg.innerHTML = CAUSES.filter(c=>seen.has(c)).map(c =>
+      `<span><i class="swatch" style="background:${col(c)}"></i>${esc(c)}</span>`).join("")
+    + `<span><i class="swatch" style="background:var(--line-strong)"></i>rest (&lt;5% each)</span>`;
+  fig.appendChild(lg);
+
+  const svg = el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img",
+                        "aria-label":`Posterior belief over time; true cause ${trueCause}`});
+  timeAxis(svg, dur, TOP, PLOT);
+  [0,.5,1].forEach(v=>{
+    const y = TOP + PLOT*(1-v);
+    svg.appendChild(el("text",{x:PADL-7,y:y+3,"text-anchor":"end",class:"tick"},[txt(v*100+"%")]));
+  });
+
+  if(!trace.length){
+    svg.appendChild(el("text",{x:W/2,y:TOP+PLOT/2,"text-anchor":"middle",class:"lbl"},
+      [txt("no decisions recorded — the anomaly gate never fired")]));
+  }
+
+  let gap = Infinity;
+  for(let i=1;i<trace.length;i++) gap = Math.min(gap, xOf(trace[i].t,dur)-xOf(trace[i-1].t,dur));
+  const BW = Math.max(2.5, Math.min(18, (isFinite(gap)?gap:18) - 2));
+  let prevTop = null, lastLabelX = -1e9;
+  for(const r of trace){
+    const x = xOf(r.t,dur) - BW/2;
+    let acc = 0, other = 0;
+    const g = el("g",{});
+    for(const c of CAUSES){
+      const p = (r.belief||{})[c] || 0;
+      if(p < 0.05){ other += p; continue; }     /* fold the tail into one neutral band */
+      const raw = PLOT*p;
+      const y   = TOP + PLOT*(1-acc-p);
+      g.appendChild(el("rect",{x:x,y:y+1,width:BW,height:Math.max(2,raw-2),fill:col(c),rx:2}));
+      acc += p;
+    }
+    if(other > 0.005){
+      const raw = PLOT*other;
+      g.appendChild(el("rect",{x:x,y:TOP+PLOT*(1-acc-other)+1,width:BW,
+                               height:Math.max(2,raw-2),fill:"var(--line-strong)",rx:2}));
+    }
+    /* direct label only when the leading cause CHANGES — the transitions are the story,
+       and it is the relief the light-mode contrast WARN requires (with the table view) */
+    if(r.p >= 0.4 && r.top !== prevTop){
+      const lx = xOf(r.t,dur);
+      if(lx - lastLabelX >= 46){
+        g.appendChild(el("text",{x:lx,y:TOP-2,"text-anchor":"middle",
+          class: r.top===trueCause ? "lbl-strong" : "lbl"},[txt(r.top)]));
+        lastLabelX = lx;
+      }
+      prevTop = r.top;
+    }
+    const hit = el("rect",{x:x-3,y:TOP,width:BW+6,height:PLOT,fill:"transparent"});
+    hit.addEventListener("pointerenter", ev => showTip(ev, beliefTip(r)));
+    hit.addEventListener("pointermove",  ev => moveTip(ev));
+    hit.addEventListener("pointerleave", hideTip);
+    g.appendChild(hit);
+    svg.appendChild(g);
+  }
+  onsetMark(svg, onset, dur, TOP, PLOT, true);
+  const box = document.createElement("div"); box.className = "chart"; box.appendChild(svg);
+  fig.appendChild(box);
+  return fig;
+}
+
+function beliefTip(r){
+  const rows = CAUSES.map(c=>[c,(r.belief||{})[c]||0]).filter(([,p])=>p>0.005)
+                     .sort((a,b)=>b[1]-a[1]);
+  return `<b>t = ${(+r.t).toFixed(1)} s</b><div class="kv" style="margin-top:4px">`
+    + rows.map(([c,p])=>`<i><span style="color:${col(c)}">●</span> ${esc(c)}</i><span>${pc(p)}</span>`).join("")
+    + `</div>`;
+}
+
+/* -------------------------------------------------- delivery trace ---- */
+function pdrFigure(series, acts, onset, recovery, dur){
+  const H = 170, TOP = 10, PLOT = H - TOP - 22;
+  const fig = document.createElement("figure");
+  const cap = document.createElement("figcaption");
+  cap.innerHTML = `<b>Packet delivery.</b> Same clock as above, so the belief can be read against
+     what the link was actually doing. Dashed line: onset. Dotted green: recovery. Markers are
+     the actions the controller let through — hover one for its stated reason.`;
+  fig.appendChild(cap);
+
+  const svg = el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Packet delivery ratio over time"});
+  timeAxis(svg, dur, TOP, PLOT);
+  [0,.5,1].forEach(v=>{
+    const y = TOP + PLOT*(1-v);
+    if(v>0) svg.appendChild(el("line",{x1:PADL,x2:W-PADR,y1:y,y2:y,class:"grid"}));
+    svg.appendChild(el("text",{x:PADL-7,y:y+3,"text-anchor":"end",class:"tick"},[txt(v.toFixed(1))]));
+  });
+
+  const pts = series.filter(p=>Array.isArray(p)&&p.length>=2);
+  if(pts.length){
+    const d = pts.map((p,i)=>`${i?"L":"M"}${xOf(p[0],dur).toFixed(1)},${(TOP+PLOT*(1-Math.max(0,Math.min(1,p[1])))).toFixed(1)}`).join("");
+    svg.appendChild(el("path",{d:d,fill:"none",stroke:"var(--ink)","stroke-width":2,
+                               "stroke-linejoin":"round","stroke-linecap":"round"}));
+  }else{
+    svg.appendChild(el("text",{x:W/2,y:TOP+PLOT/2,"text-anchor":"middle",class:"lbl"},[txt("no pdr_series in this record")]));
+  }
+
+  onsetMark(svg, onset, dur, TOP, PLOT, true);
+
+  if(recovery!=null){
+    const x = xOf(recovery,dur);
+    svg.appendChild(el("line",{x1:x,x2:x,y1:TOP,y2:TOP+PLOT,stroke:"var(--good)","stroke-width":1.5,"stroke-dasharray":"2 3"}));
+    svg.appendChild(el("text",{x:x+4,y:TOP+PLOT-3,class:"lbl"},[txt("recovered")]));
+  }
+
+  for(const a of acts){
+    const x = xOf(a.t,dur), y = TOP+PLOT;
+    const m = el("g",{});
+    m.appendChild(el("circle",{cx:x,cy:y,r:5.5,fill:"var(--surface-1)",stroke:"var(--ink)","stroke-width":2}));
+    m.appendChild(el("circle",{cx:x,cy:y,r:2.2,fill:"var(--ink)"}));
+    const hit = el("circle",{cx:x,cy:y,r:14,fill:"transparent"});
+    hit.addEventListener("pointerenter", ev=>showTip(ev,
+      `<b>${esc(a.fn)}</b> <span style="color:var(--ink-3)">t=${(+a.t).toFixed(1)}s</span>`
+      + (a.args&&Object.keys(a.args).length?`<div class="mono" style="margin-top:3px">${esc(JSON.stringify(a.args))}</div>`:"")
+      + (a.why?`<div style="margin-top:4px">${esc(a.why)}</div>`:"")
+      + (a.expect?`<div style="margin-top:4px;color:var(--ink-3)">expects: ${esc(a.expect)}</div>`:"")));
+    hit.addEventListener("pointermove", moveTip);
+    hit.addEventListener("pointerleave", hideTip);
+    m.appendChild(hit);
+    svg.appendChild(m);
+  }
+  const box = document.createElement("div"); box.className = "chart"; box.appendChild(svg);
+  fig.appendChild(box);
+  return fig;
+}
+
+/* ------------------------------------------------- tests & actions ---- */
+function callsTable(tests, acts){
+  const rows = [
+    ...tests.map(t=>({t:t.t, kind:"test", fn:t.test, args:t.args, why:t.why, expect:""})),
+    ...acts .map(a=>({t:a.t, kind:"act",  fn:a.fn,   args:a.args, why:a.why, expect:a.expect||""})),
+  ].sort((a,b)=>a.t-b.t);
+
+  const wrap = document.createElement("figure");
+  const cap = document.createElement("figcaption");
+  cap.innerHTML = `<b>What it did, and why it said it did it.</b> The verifier never reads these
+     rationales — they are for humans (design A15).`;
+  wrap.appendChild(cap);
+  if(!rows.length){ const p=document.createElement("div"); p.className="empty";
+    p.textContent="No tests or actions in this episode."; wrap.appendChild(p); return wrap; }
+
+  const sc = document.createElement("div"); sc.className="scroll";
+  sc.innerHTML = `<table><thead><tr><th>t</th><th>kind</th><th>call</th><th>args</th><th>why / expect</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td class="num mono">${(+r.t).toFixed(1)}</td>
+      <td>${r.kind==="act"?'<span class="pill b" style="color:var(--warn)">act</span>':'<span class="pill n">test</span>'}</td>
+      <td class="mono">${esc(r.fn)}</td>
+      <td class="mono" style="color:var(--ink-3)">${esc(r.args&&Object.keys(r.args).length?JSON.stringify(r.args):"")}</td>
+      <td class="why">${esc(r.why)}${r.expect?`<br><span style="color:var(--ink-3)">expects: ${esc(r.expect)}</span>`:""}</td>
+    </tr>`).join("")}</tbody></table>`;
+  wrap.appendChild(sc);
+  return wrap;
+}
+
+function beliefTable(trace){
+  const wrap = document.createElement("figure");
+  const cap = document.createElement("figcaption");
+  cap.innerHTML = `<b>Belief, as numbers.</b>`;
+  wrap.appendChild(cap);
+  const sc = document.createElement("div"); sc.className="scroll";
+  sc.innerHTML = `<table><thead><tr><th>t</th>${CAUSES.map(c=>`<th>${esc(c)}</th>`).join("")}</tr></thead>
+    <tbody>${trace.map(r=>`<tr><td class="num mono">${(+r.t).toFixed(1)}</td>${
+      CAUSES.map(c=>{const p=(r.belief||{})[c]||0;
+        return `<td class="num mono"${p>=0.4?' style="font-weight:700"':''}>${p?pc(p):"·"}</td>`;}).join("")
+    }</tr>`).join("")}</tbody></table>`;
+  wrap.appendChild(sc);
+  return wrap;
+}
+
+/* ------------------------------------------------------------ tooltip */
+const tip = $("#tip");
+function showTip(ev, html){ tip.innerHTML = html; tip.hidden = false; moveTip(ev); }
+function moveTip(ev){
+  const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = ev.clientX + pad, y = ev.clientY + pad;
+  if(x + w > innerWidth  - 8) x = ev.clientX - w - pad;
+  if(y + h > innerHeight - 8) y = ev.clientY - h - pad;
+  tip.style.left = Math.max(8,x)+"px"; tip.style.top = Math.max(8,y)+"px";
+}
+function hideTip(){ tip.hidden = true; }
+
+/* ------------------------------------------------------------ chrome */
+$("#reload").onclick = boot;
+$("#tableToggle").onclick = e => {
+  STATE.tableView = !STATE.tableView;
+  e.currentTarget.setAttribute("aria-pressed", String(STATE.tableView));
+  if(STATE.sel) select(STATE.sel);
+};
+$("#themeToggle").onclick = () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const dark = cur ? cur === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+};
+
+boot();
+</script>
+</body>
+</html>

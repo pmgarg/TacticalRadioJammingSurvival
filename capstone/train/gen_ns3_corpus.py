@@ -24,7 +24,10 @@ def run_one(args):
     # through as "ok" -- a crashed ns-3 still leaves a partial file, and the whole
     # training corpus was silently built from truncated episodes.
     try:
-        r = subprocess.run([ns3bin, f"--config={cfg}", f"--out={base}"],
+        # AUDIT F3: --tdmaSlots was never passed, so the C++ default of 0 (CSMA only)
+        # applied and change_tdma_slot() was a no-op in every corpus episode.
+        r = subprocess.run([ns3bin, f"--config={cfg}", f"--out={base}",
+                            "--tdmaSlots=4"],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                            timeout=300)
     except Exception:

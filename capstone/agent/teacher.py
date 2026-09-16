@@ -1,5 +1,11 @@
 """
-Teacher: a privileged expert used ONLY offline, in simulation, to label traces.
+OracleLabeller: a PRIVILEGED expert used ONLY offline, in simulation, to label traces.
+
+It is NOT the teacher and must never be reported as one. It is constructed with the
+true cause and looks the answer up in a dict; its 100% is a definition, not a result.
+The teacher is `agent/llm_teacher.py`, which sees the same features the student sees and
+no ground truth. See DESIGN.md v2.0 §9.3 for the two legitimate uses of this class
+(free classification labels, and a performance ceiling) and the forbidden ones.
 
 Design note (important, and stated in the report). The design's §7.2 warns that a
 teacher must not act on information the student cannot have, or the student learns to
@@ -20,6 +26,7 @@ is evaluated with NO privileged access at all.
 from __future__ import annotations
 
 from .api import Agent, Context, Decision, CAUSES, normalise
+from .policy_table import PLAYBOOK
 
 # feature indices (see percept.features.FEATURE_NAMES)
 F_PDR, F_SPREAD, F_DEG, F_CORR = 0, 5, 6, 12
@@ -28,17 +35,7 @@ F_RETRY, F_LOAD, F_LOADCORR = 24, 28, 29
 F_SCANAGE, F_SCANBAD, F_SCANSPREAD, F_ALT, F_PERIOD = 30, 31, 32, 34, 35
 F_HB = 43
 
-# The recovery playbook (design §7.5): belief -> action. Deterministic given belief.
-PLAYBOOK = {
-    "spot":        ("hop_channel", "a clean channel exists; move to it"),
-    "sweep":       ("hop_channel", "hop ahead of the sweep"),
-    "barrage":     ("fallback_to_lora", "all channels hot; trade rate for a link"),
-    "reactive":    ("change_tdma_slot", "deny the jammer its trigger; do NOT hop"),
-    "fading":      ("set_tx_power", "geometry, not an attacker; raise margin, NEVER hop"),
-    "node_loss":   ("reroute", "the peer is gone; route around it"),
-    "congestion":  ("change_tdma_slot", "back off and separate transmitters"),
-    "hidden_term": ("change_tdma_slot", "separate the colliding transmitters"),
-}
+# The recovery playbook now lives in agent/policy_table.py, because the student ships it.
 
 # Which cheap test would CONFIRM each cause, and the evidence that makes it unnecessary
 CONFIRMING_TEST = {
@@ -53,9 +50,9 @@ CONFIRMING_TEST = {
 }
 
 
-class TeacherAgent:
-    """Privileged expert. Construct with the true cause; never deployed."""
-    name = "teacher"
+class OracleLabeller:
+    """Privileged expert. Construct with the true cause; never deployed, never a result."""
+    name = "oracle"
 
     def __init__(self, true_cause: str, recoverable: bool = True,
                  confirm_before_acting: bool = True):
@@ -162,3 +159,8 @@ class TeacherAgent:
         if call in ("move", "mobility_test"):
             return {"dx": 30.0, "dy": 0.0, "dz": 0.0}
         return {}
+
+
+# Backwards-compatible alias. The old name asserted something untrue, so the class was
+# renamed; existing call sites keep working while they are migrated.
+TeacherAgent = OracleLabeller

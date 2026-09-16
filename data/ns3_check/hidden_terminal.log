@@ -1,0 +1,8 @@
+[sim] hidden_terminal nodes=6 jammers=0 truth=hidden_term tdmaSlots=4
+[sim] done rxOk=20455 rxErr=3798 analyzerClean=100157 analyzerDirty=19842
+[diag] node N1 beaconsSent=594 dataSent=0 dataRx=3360 peersHeard=3
+[diag] node N2 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=2
+[diag] node N3 beaconsSent=595 dataSent=3360 dataRx=0 peersHeard=3
+[diag] node N4 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=1
+[diag] node N5 beaconsSent=594 dataSent=0 dataRx=0 peersHeard=2
+[diag] node N6 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=1

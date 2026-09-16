@@ -1,0 +1,162 @@
+{
+ "version": "v1",
+ "provenance": "claude-cli induction, held-out validated",
+ "rules": [
+  {
+   "id": "sweep_periodic_fade",
+   "clauses": [
+    [
+     "scan_noise_spread",
+     ">=",
+     0.5
+    ],
+    [
+     "fade_runlen_mean",
+     ">=",
+     0.2
+    ]
+   ],
+   "then": {
+    "hypothesis": "sweep"
+   },
+   "note": "a channel-hopping jammer produces a spread of hot/cold channels in the scan (direct emitter evidence) plus recurring long fade runs as it revisits each channel periodically",
+   "support": 14,
+   "precision": 1.0
+  },
+  {
+   "id": "barrage_broadband",
+   "clauses": [
+    [
+     "noise_delta_base",
+     ">=",
+     0.5
+    ],
+    [
+     "scan_bad_frac",
+     ">=",
+     0.9
+    ],
+    [
+     "scan_noise_spread",
+     "<=",
+     0.3
+    ]
+   ],
+   "then": {
+    "hypothesis": "barrage"
+   },
+   "note": "a wideband jammer raises the noise floor uniformly, so the scan finds essentially every channel bad with low spread between channels",
+   "support": 26,
+   "precision": 1.0
+  },
+  {
+   "id": "spot_narrowband",
+   "clauses": [
+    [
+     "noise_delta_base",
+     ">=",
+     0.5
+    ],
+    [
+     "scan_bad_frac",
+     ">=",
+     0.1
+    ],
+    [
+     "scan_bad_frac",
+     "<=",
+     0.85
+    ],
+    [
+     "scan_noise_spread",
+     ">=",
+     0.5
+    ],
+    [
+     "fade_runlen_mean",
+     "<=",
+     0.15
+    ]
+   ],
+   "then": {
+    "hypothesis": "spot"
+   },
+   "note": "a single-channel jammer taints only some channels, leaving clean alternates, so the scan shows a large spread between good and bad channels with no periodic fade pattern",
+   "support": 13,
+   "precision": 1.0
+  },
+  {
+   "id": "reactive_decorrelated_shadow_loss",
+   "clauses": [
+    [
+     "tx_shadow_loss_delta",
+     ">=",
+     0.3
+    ],
+    [
+     "rssi_pdr_corr",
+     "<=",
+     0.3
+    ]
+   ],
+   "then": {
+    "hypothesis": "reactive"
+   },
+   "note": "a reactive jammer only keys on our transmissions, so loss is concentrated as shadow-loss on our own tx attempts yet decoupled from the normal RSSI-PDR relationship, unlike pure link-quality effects",
+   "support": 13,
+   "precision": 1.0
+  },
+  {
+   "id": "congestion_selfshadow_zero_silent",
+   "clauses": [
+    [
+     "tx_shadow_loss_delta",
+     ">=",
+     0.3
+    ],
+    [
+     "rssi_pdr_corr",
+     ">=",
+     0.8
+    ],
+    [
+     "silent_loss_rate",
+     "<=",
+     -0.8
+    ]
+   ],
+   "then": {
+    "hypothesis": "congestion"
+   },
+   "note": "self-inflicted collision loss tracks RSSI closely (weak links fail more under load) and yields essentially zero silent/undecodable loss since packets are lost to collision, not to a hidden emitter",
+   "support": 22,
+   "precision": 1.0
+  },
+  {
+   "id": "node_loss_heartbeat_gap",
+   "clauses": [
+    [
+     "tx_shadow_loss_delta",
+     "<",
+     0.3
+    ],
+    [
+     "rssi_pdr_corr",
+     ">=",
+     0.9
+    ],
+    [
+     "heartbeat_gap",
+     ">=",
+     0.3
+    ]
+   ],
+   "then": {
+    "hypothesis": "node_loss"
+   },
+   "note": "a physically lost node stops sending heartbeats entirely (large positive heartbeat gap) while surviving links still show ordinary RSSI-correlated behavior",
+   "support": 10,
+   "precision": 0.8
+  }
+ ]
+}

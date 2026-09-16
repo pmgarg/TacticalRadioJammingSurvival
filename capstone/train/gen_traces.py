@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import yaml
 from agent.controller import Controller
-from agent.teacher import TeacherAgent
+from agent.teacher import OracleLabeller
 from scenario.schema import load_scenario
 from sim.refsim import RefSim
 from verify.verifier import score_episode
@@ -24,7 +24,7 @@ COSTCFG = yaml.safe_load(open(os.path.join(HERE, "contract", "cost_matrix.yaml")
 
 def rollout(sc, agent=None):
     sim = RefSim(sc)
-    ag = agent or TeacherAgent(sc.truth.cause, sc.truth.recoverable)
+    ag = agent or OracleLabeller(sc.truth.cause, sc.truth.recoverable)
     ctrl = Controller(sim, sc, ag, CONTRACT)
     log = ctrl.run()
     truth = {"cause": sc.truth.cause, "onset_t": sc.truth.onset_t,

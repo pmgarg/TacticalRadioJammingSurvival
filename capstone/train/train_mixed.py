@@ -15,7 +15,8 @@ import numpy as np, yaml
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import LabelEncoder
 
-from agent.teacher import TeacherAgent
+from agent.teacher import OracleLabeller
+from train.train_student import conformal_threshold
 from agent.api import Context
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -48,7 +49,7 @@ def relabel_calls(rows):
         by_scn.setdefault(r["scenario"], []).append(r)
     for scn, rs in by_scn.items():
         rs.sort(key=lambda x: x["t"])
-        t = TeacherAgent(rs[0]["cause"], recoverable=("refusal" not in scn))
+        t = OracleLabeller(rs[0]["cause"], recoverable=("refusal" not in scn))
         t.reset()
         for r in rs:
             ctx = Context(t=r["t"], channel=6, n_channels=8, peers=[], budget={},
@@ -77,12 +78,26 @@ def main():
     ap.add_argument("--out", default="../data/student_mixed")
     ap.add_argument("--hidden", type=int, default=64)
     ap.add_argument("--bridge", default="../data/traces_bridge/train.jsonl")
+    ap.add_argument("--llm", default="../data/traces_llm/train.jsonl",
+                    help="LLM-teacher rows (train/llm_traces_to_rows.py). These supply the "
+                         "CALL targets the simulator cannot label -- which test to run and "
+                         "when to stop investigating. DESIGN v2.0 section 9.5 step 2.")
+    ap.add_argument("--llm-weight", type=int, default=3,
+                    help="LLM rows are few and expensive; upweight them like bridge rows")
     ap.add_argument("--bridge-weight", type=int, default=4,
                     help="repeat live ns-3 on-policy states this many times")
     a = ap.parse_args()
 
     tr = load(os.path.join(a.refsim, "train.jsonl"), "refsim")
-    d1 = load(os.path.join(a.refsim, "_r1", "train.jsonl"), "dagger")  # DAgger round 1
+    # AUDIT F4.7: `_r1/train.jsonl` is BY CONSTRUCTION `base + round-1 rows` (see
+    # train/dagger.py), so `tr + d1` contained every base row twice and silently
+    # doubled the weight of the refsim distribution. Keep only what round 1 ADDED.
+    d1_all = load(os.path.join(a.refsim, "_r1", "train.jsonl"), "dagger")
+    seen = {json.dumps(r, sort_keys=True) for r in tr}
+    d1 = [r for r in d1_all if json.dumps(r, sort_keys=True) not in seen]
+    if d1_all:
+        print(f"  dagger round 1: {len(d1_all)} rows, {len(d1)} of them new "
+              f"({len(d1_all) - len(d1)} were duplicates of the base corpus)")
     n3 = load(os.path.join(a.ns3, "train.jsonl"), "ns3")
     if n3:
         relabel_calls(n3)
@@ -92,12 +107,17 @@ def main():
         relabel_calls(va3)
 
     br = load(a.bridge, "bridge")
+    lm = load(a.llm, "llm")
     # On-policy states from LIVE ns-3 are few but they are the only ones drawn from the
     # distribution the agent actually visits at deployment. Upweight them.
-    train = tr + d1 + n3 + br * a.bridge_weight
+    train = tr + d1 + n3 + br * a.bridge_weight + lm * a.llm_weight
     val = va + va3
     print(f"train rows: refsim={len(tr)} dagger={len(d1)} ns3={len(n3)} "
-          f"bridge={len(br)}x{a.bridge_weight}  total={len(train)}")
+          f"bridge={len(br)}x{a.bridge_weight} llm={len(lm)}x{a.llm_weight}  "
+          f"total={len(train)}")
+    if not lm:
+        print("  NOTE: no LLM-teacher rows. The student is being distilled from the ORACLE "
+              "only, which is the gap DESIGN v2.0 section 9.5 names as the thesis.")
     print(f"val   rows: refsim={len(va)} ns3={len(va3)}  total={len(val)}")
 
     X = np.array([r["features"] for r in train], np.float32)
@@ -142,10 +162,18 @@ def main():
                 "b": [b.astype(np.float32).tolist() for b in m.intercepts_]}
     n = sum(w.size for w in cause.coefs_) + sum(b.size for b in cause.intercepts_) \
         + sum(w.size for w in call.coefs_) + sum(b.size for b in call.intercepts_)
-    json.dump({"contract_version": "1.0.0", "n_features": int(X.shape[1]),
+    # AUDIT F4.4 / F4: the version was hardcoded to 1.0.0 while the contract was 1.1.0,
+    # which defeats the version check the field exists for; and the abstain threshold was
+    # hardcoded to 0.0, so the calibrated abstention the design describes never fired.
+    _contract = json.load(open(os.path.join(HERE, "contract", "agent_contract.json")))
+    _abstain = (conformal_threshold(pv, yvc, classes, target_err=0.10)
+                if len(Xv) else 0.0)
+    print(f"  abstain threshold (conformal, on the min-cost statistic): {_abstain:.3f}")
+    json.dump({"contract_version": _contract["contract_version"],
+               "n_features": int(X.shape[1]),
                "cause": dump(cause, lec), "call": dump(call, lea),
                "cost_order": CAUSE_ORDER, "cost_matrix": COST.tolist(),
-               "abstain_threshold": 0.0},
+               "abstain_threshold": float(_abstain)},
               open(os.path.join(a.out, "student_bundle.json"), "w"))
     print(f"\nparameters={n:,}  fp32={n*4/1024:.1f} KB  int8={n/1024:.1f} KB  "
           f"(budget 512 KB) -> {'FITS' if n*4/1024 < 512 else 'TOO BIG'}")

@@ -48,8 +48,9 @@ Your ns-3.45 tree: `/Users/prateekgarg/Documents/NS3/ns-3-dev`
 
 ```bash
 # 1. install the scenario program
-cp sim_ns3/jamming-sim.cc ~/Documents/NS3/ns-3-dev/scratch/
-cd ~/Documents/NS3/ns-3-dev && ./ns3 build jamming-sim
+# one command does install + build + run-all + row/exit-code checks:
+bash sim_ns3/build_and_check.sh
+python3 capstone/tests/test_world_ns3.py     # asserts the fixes took effect
 
 # 2. export any scenario to the flat config ns-3 reads
 cd <repo>/capstone

@@ -16,7 +16,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-from .norm import (N_FEATURES, RSSI_OFFSET, RSSI_SCALE, NOISE_OFFSET, NOISE_SCALE,
+from .norm import (N_FEATURES, GATE_WARMUP_S, RSSI_OFFSET, RSSI_SCALE, NOISE_OFFSET, NOISE_SCALE,
                    SINR_OFFSET, SINR_SCALE, DBM_DELTA_SCALE, RATE_SCALE,
                    SPEED_SCALE, DIST_SCALE, SLOPE_SCALE, PERCEPT_HZ, TAU_FAST,
                    TAU_SLOW, TAU_BASE, CORR_WINDOW_S, FADE_PDR_THRESH,
@@ -242,10 +242,45 @@ class FeatureExtractor:
                     (o.noise_dbm - self.noise_base.value) > 6.0)
         retry_up = retry_mean > 0.35
         zero_rx = hb_now > 3.0
-        if (fired or noise_up or retry_up or zero_rx) and self.onset_t is None:
+
+        # S4' as a GATE trigger, not just a feature.
+        #
+        # Measured on the fixed simulator: a correctly-modelled reactive jammer drops
+        # delivery by only 0.994 -> 0.946 -- about 5 points -- while barrage and spot
+        # collapse it to zero. That is not a weak jammer, it is what the brief describes:
+        # "delivery fine, but everything is a retransmission". A gate that watches PDR
+        # therefore never fires, the agent is never allowed to decide, and the episode
+        # ends with no diagnosis at all -- which is exactly what happened to the LLM
+        # teacher on ns-3 reactive: 26 steps, 0 decisions, declared=None.
+        #
+        # The loss is not absent, it is CONCENTRATED right after our own transmissions.
+        # S4' measures precisely that, and on the fixed world it reads +0.43 for reactive
+        # against <=+0.27 for every other family. So it belongs in the gate.
+        self._gate_shadow_exp = getattr(self, "_gate_shadow_exp", 0) + o.shadow_expected
+        self._gate_shadow_miss = getattr(self, "_gate_shadow_miss", 0) + o.shadow_missed
+        self._gate_silent_exp = getattr(self, "_gate_silent_exp", 0) + o.silent_expected
+        self._gate_silent_miss = getattr(self, "_gate_silent_miss", 0) + o.silent_missed
+        shadow_up = False
+        if self._gate_shadow_exp >= 10 and self._gate_silent_exp >= 10:
+            shadow_up = ((self._gate_shadow_miss / self._gate_shadow_exp)
+                         - (self._gate_silent_miss / self._gate_silent_exp)) > 0.20
+
+        # WARMUP. Every trigger above is "this departs from our baseline", and for the
+        # first couple of seconds there is no baseline to depart from: a handful of frames
+        # have been exchanged, so retry_mean and heartbeat_age are noisy and large. Without
+        # this guard the gate fired at t=1.0 s on EVERY family, including fading and a
+        # perfectly healthy link -- which makes detection latency meaningless and hands the
+        # agent a decision before it has seen anything. Corpus onsets are >= 14 s, so a
+        # short warmup costs no real detection latency.
+        self._gate_samples = getattr(self, "_gate_samples", 0) + 1
+        warm = (self._gate_samples * dt) >= GATE_WARMUP_S and self.pdr_base.init
+
+        if warm and (fired or noise_up or retry_up or zero_rx or shadow_up) \
+                and self.onset_t is None:
             self.onset_t, self.onset_pos = o.t, o.pos
             self._gate_reason = ("pdr" if fired else "noise" if noise_up
-                                 else "retry" if retry_up else "zero_rx")
+                                 else "retry" if retry_up else "zero_rx" if zero_rx
+                                 else "tx_shadow")
         r_ewma = self.retry_ewma.update(retry_mean, dt)
         retries_per_success = retry_mean / max(1e-3, pdr_mean)
         self.max_consec_fail = max(self.max_consec_fail, o.consecutive_tx_fail)

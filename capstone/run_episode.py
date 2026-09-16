@@ -25,7 +25,6 @@ from scenario.library import FAMILIES, build_corpus
 from sim.refsim import RefSim
 from agent.controller import Controller
 from agent.baseline import BaselineAgent
-from agent.teacher import TeacherAgent
 from agent.student import StudentAgent
 from verify.verifier import score_episode, aggregate, gates
 
@@ -33,28 +32,40 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CONTRACT = json.load(open(os.path.join(HERE, "contract", "agent_contract.json")))
 COSTCFG = yaml.safe_load(open(os.path.join(HERE, "contract", "cost_matrix.yaml")))
 
-# "rules" (agent.rule_agent.RuleAgent) is intentionally not registered here yet --
-# its default policy file (data/policy_v3.json) was never committed; see
-# personal/CODE_ALIGNMENT_REVIEW.md. Register it once harness/induce.py has produced
-# and saved that file.
-STUDENT_BUNDLE = os.path.join(HERE, "..", "data", "student_final", "student_bundle.json")
-AGENTS = {
-    # zero-arg factories only; "oracle" needs the scenario's own truth and is built
-    # per-episode in run_one() below, since a privileged agent cannot be a stateless
-    # singleton the way the others are.
-    "baseline": BaselineAgent,
-    "student": lambda: StudentAgent(STUDENT_BUNDLE),
-    "oracle": None,
-}
+def _student(bundle=None):
+    return StudentAgent(bundle) if bundle else StudentAgent()
+
+
+def _hybrid(bundle=None):
+    from agent.hybrid import HybridAgent
+    return HybridAgent(bundle) if bundle else HybridAgent()
+
+
+def _rule(policy=None):
+    from agent.rule_agent import RuleAgent            # imported lazily: needs a policy file
+    return RuleAgent(policy) if policy else RuleAgent()
+
+
+def _oracle(sc):
+    from agent.teacher import OracleLabeller
+    return OracleLabeller(sc.truth.cause, sc.truth.recoverable)
+
+
+# AUDIT F4.9: this registry used to hold only the baseline, so the documented entry point
+# could not run the thing the project ships. `oracle` is included because it is a useful
+# CEILING -- it is handed the answer, and run_episode labels it as such in the output.
+AGENTS = {"baseline": BaselineAgent, "student": _student, "hybrid": _hybrid,
+          "rule": _rule, "oracle": _oracle}
+PRIVILEGED = {"oracle"}
 
 
 def run_one(sc: Scenario, agent_name: str = "baseline", verbose: bool = False,
-            out_dir: str | None = None) -> tuple[dict, dict]:
+            out_dir: str | None = None, bundle: str | None = None) -> tuple[dict, dict]:
     sim = RefSim(sc)
-    if agent_name == "oracle":
-        agent = TeacherAgent(sc.truth.cause, sc.truth.recoverable)
-    else:
-        agent = AGENTS[agent_name]()
+    factory = AGENTS[agent_name]
+    agent = factory(sc) if agent_name in PRIVILEGED else (
+        factory(bundle) if (agent_name in ("student", "hybrid", "rule") and bundle)
+        else factory())
     ctrl = Controller(sim, sc, agent, CONTRACT, verbose=verbose)
     log = ctrl.run()
     truth = {"cause": sc.truth.cause, "onset_t": sc.truth.onset_t,
@@ -83,6 +94,7 @@ def main():
     ap.add_argument("--seeds", type=int, default=1)
     ap.add_argument("--agent", default="baseline", choices=list(AGENTS))
     ap.add_argument("--out", default=None, help="write raw records here")
+    ap.add_argument("--bundle", default=None, help="student/rule artefact to load")
     ap.add_argument("-v", "--verbose", action="store_true")
     a = ap.parse_args()
 
@@ -96,7 +108,7 @@ def main():
 
     scores = []
     for sc in scens:
-        rec, truth = run_one(sc, a.agent, a.verbose, a.out)
+        rec, truth = run_one(sc, a.agent, a.verbose, a.out, a.bundle)
         s = score_episode(rec["episode_log"], truth, COSTCFG, CONTRACT, sc.family)
         scores.append(s)
         if a.verbose or len(scens) == 1:
@@ -119,7 +131,9 @@ def main():
 
     agg = aggregate(scores)
     print("\n" + "=" * 74)
-    print(f"AGENT={a.agent}   episodes={agg['n']}")
+    priv = "   [PRIVILEGED: handed the true cause -- a CEILING, not a result]" \
+        if a.agent in PRIVILEGED else ""
+    print(f"AGENT={a.agent}   episodes={agg['n']}{priv}")
     print(f"  classification accuracy : {agg['classification_acc']:.2%}")
     print(f"  expected cost (lower=better): {agg['expected_cost']:.2f}")
     print(f"  detection latency (median) : {agg['detection_latency_median_s']}")
@@ -138,8 +152,8 @@ def main():
     g = gates(agg, {"fp_max": 0.05})
     print("\n  GATES:")
     for k, v in g.items():
-        print(f"    {k:22s} value={v['value']}  target={v['target']}  "
-              f"{'PASS' if v['pass'] else 'FAIL'}")
+        verdict = ("PASS" if v["pass"] else "FAIL") if v["applicable"] else f"n/a ({v['note']})"
+        print(f"    {k:22s} value={v['value']}  target={v['target']}  {verdict}")
     print("=" * 74)
 
 

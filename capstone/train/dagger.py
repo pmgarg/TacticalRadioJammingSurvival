@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import yaml
 from agent.controller import Controller
 from agent.student import StudentAgent
-from agent.teacher import TeacherAgent
+from agent.teacher import OracleLabeller
 from agent.api import Context
 from scenario.schema import load_scenario
 from sim.refsim import RefSim
@@ -48,7 +48,7 @@ def dagger_round(files, bundle, uncertainty_only=True):
         # ONE teacher for the whole episode, fed states in order. A fresh teacher per
         # state resets its "have I already run the confirming test?" counter, so it
         # demands a test at every step and poisons the labels.
-        teach = TeacherAgent(sc.truth.cause, sc.truth.recoverable)
+        teach = OracleLabeller(sc.truth.cause, sc.truth.recoverable)
         teach.reset()
         for r in ctrl.records:
             ctx = Context(t=r["t"], channel=sc.channel, n_channels=sc.n_channels,
@@ -80,10 +80,22 @@ def main():
         rows, n_rel, n_ep = dagger_round(files, cur_bundle)
         print(f"  round {r}: rolled out {n_ep} episodes, relabelled {n_rel} states")
         out = os.path.join(a.traces, f"train_dagger{r}.jsonl")
-        # union of the original traces and everything collected so far
+        # Union of the base traces and everything collected so far.
+        #
+        # AUDIT F4.7: this used to look for `train_dagger{k}.jsonl` for k<r, but
+        # `os.replace` below had already MOVED those files into `_r{k}/train.jsonl`.
+        # `os.path.exists` was therefore False and round 2 trained on base + round-2
+        # rows only, silently dropping round 1 -- which is the round the report says
+        # carries most of the gain. Read the moved location, and fail loudly if a
+        # previous round's file has gone missing rather than quietly training on less.
+        prior = [os.path.join(a.traces, f"_r{k}", "train.jsonl") for k in range(1, r)]
+        missing = [p for p in prior if not os.path.exists(p)]
+        if missing:
+            raise FileNotFoundError(
+                f"DAgger round {r} cannot find earlier rounds: {missing}. "
+                f"Refusing to train on a partial union.")
         with open(out, "w") as fh:
-            for src in [base] + [os.path.join(a.traces, f"train_dagger{k}.jsonl")
-                                 for k in range(1, r)]:
+            for src in [base] + prior:
                 if os.path.exists(src):
                     fh.write(open(src).read())
             for row in rows:
@@ -97,8 +109,14 @@ def main():
         if os.path.exists(vs):
             import shutil
             shutil.copy(vs, os.path.join(tmp_traces, "val.jsonl"))
-        os.system(f"cd {HERE} && python3 train/train_student.py --traces {tmp_traces} "
-                  f"--out {outdir} 2>&1 | grep -E 'min-exp-cost|call head|float32'")
+        # AUDIT F4.7: os.system + grep swallowed training failures, so the loop happily
+        # continued with a stale or missing bundle. Check the exit status.
+        import subprocess
+        rc = subprocess.run([sys.executable, "train/train_student.py",
+                             "--traces", tmp_traces, "--out", outdir],
+                            cwd=HERE).returncode
+        if rc != 0:
+            raise RuntimeError(f"train_student.py failed (exit {rc}) in DAgger round {r}")
         cur_bundle = os.path.join(outdir, "student_bundle.json")
         print(f"  round {r} bundle -> {cur_bundle}")
     print(f"\nFINAL DAgger bundle: {cur_bundle}")

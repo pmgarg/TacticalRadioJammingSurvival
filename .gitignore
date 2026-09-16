@@ -3,7 +3,7 @@ personal/
 
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 .venv/
 venv/
 
@@ -11,9 +11,13 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Large local artifacts
+# Large local artifacts / session staging tarballs
 _scratch/
 *.tar.gz
+
+# Pre-filter trace copies kept only as local evidence of the sweep-family leak.
+# The filtered corpora (train.jsonl / val.jsonl / test.jsonl) are the shipping data.
+*.leaked.jsonl
 
 # Generated LLM cache: content-addressed by prompt hash, mechanically
 # regenerable, and redundant with what each DecisionRecord already stores

@@ -447,6 +447,29 @@ class RefSim:
     def load_test(self, factor: float = 0.5) -> None:
         self.load_factor = max(1.0, self.load_factor * factor)
 
+    def neighbor_probe(self, peer: str | None = None) -> dict:
+        """Is a specific peer alive on ANY channel? The node_loss distinguishing test.
+
+        AUDIT/G1: this was in the contract, in the LLM teacher's prompt and in the
+        oracle's CONFIRMING_TEST table, but no simulator implemented it -- the agent
+        spent 2 budget and learned nothing. A probe is directed and cheap, so it also
+        refreshes liveness for the probed peer rather than waiting for a beacon.
+        """
+        peers = [peer] if peer and peer in self.alive else list(self.alive)
+        alive = {p: bool(self.alive.get(p, True)) for p in peers}
+        for p, ok in alive.items():
+            if ok:
+                # A directed probe gets a directed answer, so a live peer's reciprocal
+                # report is refreshed immediately instead of waiting for its next beacon.
+                # That is exactly what makes the test discriminating for node_loss: a
+                # jammed peer still answers eventually, a dead one never does.
+                rep = self._peer_reports.get(p)
+                if rep:
+                    self._peer_reports[p] = (rep[0], rep[1], self.t)
+        self.probe_results = alive
+        self.probes_run = getattr(self, "probes_run", 0) + 1
+        return alive
+
     def fallback_to_lora(self) -> None:
         self.lora_active = True
 
