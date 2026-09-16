@@ -101,7 +101,13 @@ class ClaudeCliProvider:
 
         if r.returncode != 0:
             self.errors += 1
-            raise LlmError(f"claude exited {r.returncode}: {r.stderr.strip()[:300]}")
+            # stderr alone is not enough to diagnose a failure: the CLI can exit
+            # non-zero with an error body on stdout (e.g. --output-format json
+            # still emitting {"is_error": true, ...}) and empty stderr. A prior
+            # concurrent-workers run hit this blind spot -- 14 straight failures
+            # logged only "claude exited 1: " with nothing else to go on.
+            detail = r.stderr.strip()[:300] or r.stdout.strip()[:300] or "(no stdout or stderr)"
+            raise LlmError(f"claude exited {r.returncode}: {detail}")
 
         try:
             payload = json.loads(r.stdout)
