@@ -316,6 +316,24 @@ static std::map<Mac48Address, uint32_t> g_macToIdx;
 static std::map<uint32_t, double> g_linkRssi;   // per source node index
 static std::map<uint32_t, double> g_linkRssiT;  // when it was measured
 static std::vector<double> g_band, g_bandFloor, g_bandFloorBridge;
+/* MEAN linear power per channel over the clean (agent-silent) analyzer reports in the
+ * current window, for the CSV path and the bridge path separately.
+ *
+ * WHY THIS EXISTS. The band was reported as a strict MIN-HOLD over the window. Min-hold
+ * is the right idea for "the noise floor when nobody is transmitting", and it correctly
+ * rejects our own bursts -- but it makes any DUTY-CYCLED jammer invisible, because the
+ * minimum always lands in one of the jammer's own gaps. The corpus runs spot/reactive at
+ * duty 0.7; the hand-written world-gate scenarios run at duty 1.0. So the gate passed
+ * 17/17 while every duty-cycled jammer in the actual corpus was reported at the quiet
+ * floor, and S2 (noise_delta_base) and S5 (scan_noise_spread) were identically zero for
+ * whole episodes.
+ *
+ * Mean power over the agent-silent samples is what an ENERGY DETECTOR measures, it is
+ * monotone in jammer duty, and it is what the hardware path does too (hal_esp32.c counts
+ * nRF24 RPD hits and maps the hit fraction onto a dBm scale). meas_floor_dbm keeps the
+ * min-hold, so "the floor" and "the energy" are now two different numbers instead of one
+ * number that could only ever answer the first question. */
+static std::vector<std::vector<double>> g_bandSamp, g_bandSampBridge;
 static double g_lastNoise = -96.0;
 /* The analyzer sits at the agent, so while the agent transmits it measures the
  * agent's own 16 dBm signal, not the channel. A real radio cannot listen while it
@@ -397,11 +415,56 @@ AnalyzerReport(Ptr<const SpectrumValue> psd)
     {
         g_bandFloorBridge.assign(g_nCh, 1e9);
     }
+    if (g_bandSamp.size() != g_nCh)
+    {
+        g_bandSamp.assign(g_nCh, {});
+    }
+    if (g_bandSampBridge.size() != g_nCh)
+    {
+        g_bandSampBridge.assign(g_nCh, {});
+    }
     for (uint32_t c = 0; c < g_nCh; ++c)
     {
         g_bandFloor[c] = std::min(g_bandFloor[c], g_band[c]);
         g_bandFloorBridge[c] = std::min(g_bandFloorBridge[c], g_band[c]);
+        g_bandSamp[c].push_back(g_band[c]);
+        g_bandSampBridge[c].push_back(g_band[c]);
     }
+}
+
+/* MEDIAN power per channel over this window's agent-silent reports, in dBm.
+ *
+ * Neither extreme works. The strict MINIMUM rejects every transmission, including a
+ * duty-cycled jammer's -- the minimum always lands in one of its gaps, so a duty-0.7 spot
+ * jammer reads exactly the quiet floor and S2/S5 are identically zero. The MEAN rejects
+ * nothing: the other five nodes beacon and carry data continuously, so the mean sits tens
+ * of dB above the floor before any jammer exists at all.
+ *
+ * The median is the level exceeded half the time. Ordinary mesh traffic occupies well
+ * under half of any window, so it does not move the median; a jammer at duty >= 0.5 does,
+ * by construction. That is the statistic an energy detector with a sensible threshold
+ * actually implements, and it is what the nRF24 RPD hit-count approximates on hardware.
+ *
+ * Falls back to the min-hold when the window held no agent-silent report at all. */
+static std::vector<double>
+BandEnergy(std::vector<std::vector<double>>& samp, const std::vector<double>& fallback)
+{
+    std::vector<double> out(g_nCh, -200.0);
+    for (uint32_t c = 0; c < g_nCh; ++c)
+    {
+        if (c < samp.size() && !samp[c].empty())
+        {
+            std::vector<double>& v = samp[c];
+            const size_t mid = v.size() / 2;
+            std::nth_element(v.begin(), v.begin() + mid, v.end());
+            out[c] = v[mid];
+        }
+        else if (c < fallback.size() && fallback[c] < 1e8)
+        {
+            out[c] = fallback[c];
+        }
+    }
+    return out;
 }
 
 static void
@@ -1277,13 +1340,17 @@ main(int argc, char* argv[])
 
         const std::vector<double>& fv = (g_bandFloor.size() == g_nCh) ? g_bandFloor : g_band;
         double meas = (g_curCh >= 1 && g_curCh - 1 < (int)fv.size() && fv[g_curCh - 1] < 1e8) ? fv[g_curCh - 1] : -200;
+        // band_power is now ENERGY (mean over agent-silent reports), not the min-hold:
+        // a duty-cycled jammer is invisible to a minimum. meas_floor_dbm above keeps the
+        // min-hold, so the two questions have two answers.
+        const std::vector<double> be = BandEnergy(g_bandSamp, fv);
         std::ostringstream bp;
-        for (size_t c = 0; c < fv.size(); ++c)
+        for (size_t c = 0; c < be.size(); ++c)
         {
-            double v = (fv[c] > 1e8) ? -200.0 : fv[c];
-            bp << (c ? " " : "") << std::fixed << std::setprecision(1) << v;
+            bp << (c ? " " : "") << std::fixed << std::setprecision(1) << be[c];
         }
         g_bandFloor.assign(g_nCh, 1e9);
+        for (auto& v : g_bandSamp) { v.clear(); }
 
         // ---- reciprocal reports + TX KPIs + TX-shadow (TELEMETRY.md) ----
         std::ostringstream revR, revP, revA;
@@ -1489,21 +1556,33 @@ main(int argc, char* argv[])
                 rs << ",";
                 hb << ",";
             }
-            js << std::setprecision(3) << pdr;
-            rs << std::setprecision(1) << r;
-            hb << std::setprecision(2) << (t - lit->second);
+            js << std::fixed << std::setprecision(3) << pdr;
+            rs << std::fixed << std::setprecision(1) << r;
+            hb << std::fixed << std::setprecision(2) << (t - lit->second);
             first = false;
             nl++;
         }
+        // NOTE: every ostringstream below MUST carry std::fixed. Without it,
+        // setprecision(n) means n SIGNIFICANT DIGITS in the default float format,
+        // so setprecision(1) emitted "-1e+02" for every noise floor between -95
+        // and -104 dBm and for every RSSI near -100. The CSV emitter had
+        // std::fixed; this one did not. Result: through the live bridge the whole
+        // spectrum collapsed to a constant -100 on all 8 channels, so S2
+        // (noise_delta_base), S5 (scan_noise_spread) and noise_std were
+        // identically zero for entire episodes -- the two decisive discrimination
+        // statistics in the design, dead, silently. The LLM teacher scored 30.8%
+        // on ns-3 vs 65.6% on refsim and the student 18.8% vs 85% on the CSV
+        // corpus, all from this one missing manipulator.
         const std::vector<double>& fv =
             (g_bandFloorBridge.size() == g_nCh) ? g_bandFloorBridge : g_band;
+        const std::vector<double> be = BandEnergy(g_bandSampBridge, fv);
         std::ostringstream bp;
-        for (size_t c = 0; c < fv.size(); ++c)
+        for (size_t c = 0; c < be.size(); ++c)
         {
-            double v = (fv[c] > 1e8) ? -200.0 : fv[c];
-            bp << (c ? "," : "") << std::setprecision(1) << v;
+            bp << (c ? "," : "") << std::fixed << std::setprecision(1) << be[c];
         }
-        g_bandFloorBridge.assign(g_nCh, 1e9);   // bridge resets its OWN min-hold
+        g_bandFloorBridge.assign(g_nCh, 1e9);   // bridge resets its OWN accumulators
+        for (auto& v : g_bandSampBridge) { v.clear(); }
         static uint64_t s_rxOk = 0, s_rxErr = 0;
         static uint32_t s_dsent = 0;
         uint64_t dOk = g_rxOk - s_rxOk, dErr = g_rxErr - s_rxErr;
@@ -1534,9 +1613,9 @@ main(int argc, char* argv[])
                 ra = t - std::get<2>(rit->second);
             }
             if (!jf) { jrevR << ","; jrevP << ","; jrevA << ","; }
-            jrevR << std::setprecision(1) << rr;
-            jrevP << std::setprecision(3) << rp;
-            jrevA << std::setprecision(2) << ra;
+            jrevR << std::fixed << std::setprecision(1) << rr;
+            jrevP << std::fixed << std::setprecision(3) << rp;
+            jrevA << std::fixed << std::setprecision(2) << ra;
             jf = false;
         }
         static uint64_t bAtt = 0, bFail = 0;

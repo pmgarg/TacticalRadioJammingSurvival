@@ -65,6 +65,11 @@ def run_one(args) -> dict:
             log = Controller(RefSim(sc), sc, ag, contract).run()
         s = score_episode(log.to_dict(), truth, costcfg, contract, sc.family)
         out = {"family": fam, "seed": seed, "ok": True,
+               # PROVENANCE. DESIGN v2.0 9.2 requires every headline teacher number to come
+               # from ns-3, and 9.1 requires a real model. Recording both on the episode is
+               # what lets tests/test_teacher_provenance.py verify it later instead of
+               # taking a filename's word for it.
+               "world": world, "provider_kind": provider_kind,
                "correct": bool(s.classification_ok), "declared": s.declared_cause,
                "cost": float(s.expected_cost), "survived": bool(s.survived),
                "fp_acted": bool(s.false_positive_acted),
@@ -72,6 +77,7 @@ def run_one(args) -> dict:
                "wall_s": round(time.time() - t0, 1), **ag.stats()}
     except Exception as e:                                   # noqa: BLE001
         out = {"family": fam, "seed": seed, "ok": False,
+               "world": world, "provider_kind": provider_kind,
                "error": f"{type(e).__name__}: {e}", "wall_s": round(time.time() - t0, 1)}
     finally:
         ts.close()
@@ -96,12 +102,18 @@ def main():
     ap.add_argument("--per-family", type=int, default=2)
     ap.add_argument("--seed0", type=int, default=9100)
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--episode-timeout-s", type=int, default=1800,
+                    help="give up on a single episode after this long; one stuck child "
+                         "must not cost the whole run's summary")
     ap.add_argument("--trace-dir", default=os.path.join(HERE, "..", "data", "traces", "llm"))
     ap.add_argument("--out", default=os.path.join(HERE, "..", "data", "llm_golden.json"))
     ap.add_argument("--compare-oracle", action="store_true", default=True)
-    ap.add_argument("--world", default="refsim", choices=["refsim", "ns3"],
-                    help="ns3 = the AUTHORITATIVE simulator, via the live bridge. Every "
-                         "headline teacher number should come from ns3 (DESIGN v2.0 9.2).")
+    ap.add_argument("--world", default="ns3", choices=["refsim", "ns3"],
+                    help="ns3 (DEFAULT) = the AUTHORITATIVE simulator via the live bridge. "
+                         "DESIGN v2.0 9.2 requires every headline teacher number to come "
+                         "from ns3. This used to default to refsim, which is how the "
+                         "shipped teacher artefacts came to be measured against the fast "
+                         "approximation: the flag enforcing the design was opt-in.")
     ap.add_argument("--provider", default="auto", choices=["auto", "claude", "stub"],
                     help="stub = deterministic offline stand-in, for testing the HARNESS "
                          "with no model. Never report a stub run as a teacher result.")
@@ -132,8 +144,21 @@ def main():
     res, t0 = [], time.time()
     with ProcessPoolExecutor(max_workers=a.workers) as ex:
         futs = {ex.submit(run_one, j): j for j in jobs}
-        for fu in as_completed(futs):
-            r = fu.result()
+        # A per-episode deadline. Without one, a single child that never returns -- an ns-3
+        # subprocess that does not exit, a model call that never comes back -- blocks
+        # as_completed forever and the summary is never written, destroying the record of
+        # every episode that DID finish. That cost a 32-episode run with 320 real model
+        # calls. Traces are written incrementally so nothing is truly lost (see
+        # harness/rescore_traces.py), but the run should not need rescuing.
+        pending = dict(futs)
+        for fu in as_completed(futs, timeout=a.episode_timeout_s * len(jobs)):
+            try:
+                r = fu.result(timeout=a.episode_timeout_s)
+            except Exception as e:                            # noqa: BLE001
+                j = pending[fu]
+                r = {"family": j[0], "seed": j[1], "ok": False, "world": j[4],
+                     "provider_kind": j[5], "wall_s": round(time.time() - t0, 1),
+                     "error": f"{type(e).__name__}: {e}"}
             res.append(r)
             mark = "ok " if r.get("correct") else "MISS" if r.get("ok") else "ERR "
             print(f"  {mark} {r['family']:<12} seed={r['seed']} "
