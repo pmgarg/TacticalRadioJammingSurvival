@@ -1,0 +1,49 @@
+graph TB
+    subgraph SIM["Tier 1 - Simulation environment (ns-3, authoritative)"]
+        CH["Channel and propagation model<br/>(Friis plus Nakagami/Rayleigh fading)"]
+        MESH["Mesh network<br/>(OLSRv1, 6 nodes, 8 channels, traffic gens)"]
+        JAM["Attack corpus generator<br/>(barrage / spot / reactive / sweep / none)"]
+        ORACLE["Ground-truth oracle<br/>(knows the real cause and timeline)"]
+    end
+
+    subgraph DRONE["On-device Mesh Agent -- runs ON the drone"]
+        MODEL["Student model (on-device)<br/>classifier plus policy head<br/>the ONLY learned model on the drone"]
+        CTRL["Agent controller<br/>Hypothesis mgr / Test selection / Action mgr<br/>Recovery mgr / Verification / Budget and failsafe"]
+        SENSE["Sense adapter"]
+        DIAG["Diagnostics adapter"]
+        ACT["Actions adapter"]
+    end
+
+    BASE["Classical deterministic baseline<br/>(rule-based diagnosis, comparator only)"]
+
+    RADIO["Classical fast radio loop<br/>(MAC / PHY / ARQ / OLSRv1, unchanged)"]
+
+    subgraph OFFLINE["Offline pipeline -- ground / lab, NEVER on the drone"]
+        TEACH["Teacher (large model,<br/>function-calling interface)"]
+        TRACE["Trace store<br/>(situation to test to result to action)"]
+        DISTIL["Distillation<br/>(produces the student bundle)"]
+    end
+
+    VERIF["Verifier / scorecard<br/>(latency, classification, FP rate,<br/>recovery, packets lost, actions, survived)"]
+
+    CH --- MESH
+    JAM --> CH
+    MESH <--> RADIO
+    RADIO <--> SENSE
+    RADIO <--> DIAG
+    SENSE --> CTRL
+    DIAG --> CTRL
+    CTRL <--> MODEL
+    CTRL --> ACT --> RADIO
+
+    RADIO -. same interface .-> BASE
+    BASE --> VERIF
+
+    MESH -. ground truth .-> ORACLE
+    JAM  -. ground truth .-> ORACLE
+    ORACLE --> VERIF
+
+    SIM --> TEACH --> TRACE --> DISTIL
+    DISTIL -->|"flash / deploy the bundle"| MODEL
+    DRONE --> VERIF
+    TEACH -. also scored .-> VERIF

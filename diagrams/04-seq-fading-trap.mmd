@@ -1,0 +1,16 @@
+sequenceDiagram
+    participant C as Controller
+    participant M as Model
+    participant R as Radio loop
+    R->>C: intermittent PDR, noise floor normal, tracks range
+    C->>M: observation
+    M-->>C: fading vs spot jamming, run spectrum_scan
+    C->>R: spectrum_scan
+    R-->>C: no excess energy on any channel
+    C->>M: updated observation
+    M-->>C: spot jamming unlikely, run mobility_test or reroute
+    C->>R: move 30 m or reroute via closer peer
+    R-->>C: link recovers with position change
+    C->>M: updated observation
+    M-->>C: fading confirmed, set_tx_power up or reroute, no hop
+    Note over C,R: declared_jamming is false, no false positive

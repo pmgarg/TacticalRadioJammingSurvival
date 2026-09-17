@@ -21,7 +21,11 @@ from .api import Agent, Context, Decision, CAUSES, normalise
 from .policy_table import PLAYBOOK
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_BUNDLE = os.path.join(HERE, "..", "data", "student", "student_bundle.json")
+# student_v9: retrained on the fixed ns-3 world (docs/FIXES.md "student_v9 -- retrained
+# on the fixed world"), the canonical bundle as of the audit-fixes merge. The prior
+# default pointed at data/student/student_bundle.json, a directory that does not exist
+# in this tree -- StudentAgent() with no explicit bundle_path crashed on FileNotFoundError.
+DEFAULT_BUNDLE = os.path.join(HERE, "..", "data", "student_v9", "student_bundle.json")
 
 
 def _relu(x):

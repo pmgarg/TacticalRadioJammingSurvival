@@ -1,0 +1,450 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Harness Trace Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --border: #2a2f3a;
+    --text: #e4e7ec; --dim: #8b93a1; --accent: #4f8cff;
+    --ok: #3ecf8e; --warn: #e8a33d; --bad: #e8555f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 13px/1.5 -apple-system, Segoe UI, sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 14px; padding: 10px 18px;
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 5;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; white-space: nowrap; }
+  select {
+    background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 8px; font-size: 13px; max-width: 260px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dim); flex: none; }
+  .dot.live { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  .dot.dead { background: var(--bad); }
+  .spacer { flex: 1; }
+  #summary {
+    display: flex; gap: 18px; padding: 10px 18px; background: var(--panel);
+    border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  }
+  .stat { display: flex; flex-direction: column; gap: 2px; min-width: 64px; }
+  .stat .v { font-size: 17px; font-weight: 700; }
+  .stat .k { font-size: 10.5px; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; }
+  main { max-width: 900px; margin: 0 auto; padding: 16px 18px 60px; }
+  .empty { color: var(--dim); text-align: center; padding: 60px 20px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 10px; animation: in .25s ease;
+  }
+  @keyframes in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .card.err { border-color: var(--bad); }
+  .card-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .step { color: var(--dim); font-variant-numeric: tabular-nums; }
+  .call {
+    font-weight: 700; background: var(--panel2); border: 1px solid var(--border);
+    padding: 2px 8px; border-radius: 999px; font-size: 12px;
+  }
+  .badge { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--dim); }
+  .badge.clean { color: var(--ok); border-color: var(--ok); }
+  .badge.repaired { color: var(--warn); border-color: var(--warn); }
+  .badge.failed { color: var(--bad); border-color: var(--bad); }
+  .badge.cache { color: var(--accent); border-color: var(--accent); }
+  .why { color: var(--text); margin: 4px 0 8px; }
+  .beliefs { display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; }
+  .belief-row { display: grid; grid-template-columns: 88px 1fr 40px; align-items: center; gap: 8px; }
+  .belief-row .name { color: var(--dim); font-size: 11.5px; }
+  .bar { background: var(--panel2); border-radius: 4px; height: 7px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); }
+  .belief-row .pct { text-align: right; font-variant-numeric: tabular-nums; color: var(--dim); font-size: 11.5px; }
+  .meta { display: flex; gap: 12px; color: var(--dim); font-size: 11.5px; flex-wrap: wrap; }
+  .meta b { color: var(--text); }
+  .err-text { color: var(--bad); margin-top: 6px; font-size: 12px; }
+
+  .tabs { display: flex; gap: 4px; background: var(--panel2); border-radius: 8px; padding: 3px; }
+  .tab {
+    background: transparent; border: none; color: var(--dim); font-size: 12.5px;
+    font-weight: 600; padding: 5px 12px; border-radius: 6px; cursor: pointer;
+  }
+  .tab.active { background: var(--accent); color: #fff; }
+  [hidden] { display: none !important; }
+
+  #run-summary { display: flex; gap: 18px; padding: 10px 18px; background: var(--panel);
+    border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .by-fam { display: flex; flex-direction: column; gap: 5px; margin: 10px 0 18px; }
+  .by-fam-row { display: grid; grid-template-columns: 110px 1fr 50px; align-items: center; gap: 8px; }
+  .by-fam-row .name { font-size: 11.5px; color: var(--dim); }
+  .by-fam-row .pct { text-align: right; font-size: 11.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+  .rcard {
+    background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--dim);
+    border-radius: 8px; padding: 10px 12px; cursor: pointer; transition: transform .1s;
+  }
+  .rcard:hover { transform: translateY(-1px); border-color: var(--accent); }
+  .rcard.ok { border-left-color: var(--ok); }
+  .rcard.miss { border-left-color: var(--bad); }
+  .rcard.live { border-left-color: var(--warn); }
+  .rcard .rc-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .rcard .rc-name { font-weight: 700; font-size: 12.5px; }
+  .rcard .rc-fam { color: var(--dim); font-size: 10.5px; text-transform: uppercase; }
+  .rcard .rc-meta { color: var(--dim); font-size: 11px; }
+  .section-label { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; margin: 18px 0 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Harness Trace Dashboard</h1>
+  <div class="tabs">
+    <button class="tab active" id="tab-episode-btn">Episode</button>
+    <button class="tab" id="tab-batch-btn">Batch</button>
+  </div>
+  <select id="episode"><option>loading episodes...</option></select>
+  <span class="dot" id="dot"></span>
+  <span id="status" style="color:var(--dim)">connecting</span>
+  <span class="spacer"></span>
+  <span style="color:var(--dim)" id="view-label">single-episode tail</span>
+</header>
+
+<div id="view-episode">
+  <div id="summary">
+    <div class="stat"><div class="v" id="s-steps">0</div><div class="k">decisions</div></div>
+    <div class="stat"><div class="v" id="s-errors">0</div><div class="k">errors</div></div>
+    <div class="stat"><div class="v" id="s-repairs">0</div><div class="k">repairs</div></div>
+    <div class="stat"><div class="v" id="s-cache">0</div><div class="k">cache hits</div></div>
+    <div class="stat"><div class="v" id="s-lat">-</div><div class="k">mean latency</div></div>
+    <div class="stat"><div class="v" id="s-verdict">-</div><div class="k">leading cause</div></div>
+  </div>
+  <main><div id="feed" class="empty">Pick an episode above, or start one with harness/run_llm.py.</div></main>
+</div>
+
+<div id="view-batch" hidden>
+  <div class="tabs" style="margin:10px 18px 0; display:inline-flex">
+    <select id="run"><option>loading runs...</option></select>
+  </div>
+  <div id="run-summary">
+    <div class="stat"><div class="v" id="r-episodes">0</div><div class="k">episodes</div></div>
+    <div class="stat"><div class="v" id="r-acc">-</div><div class="k">accuracy</div></div>
+    <div class="stat"><div class="v" id="r-oracle">-</div><div class="k">oracle agreement</div></div>
+    <div class="stat"><div class="v" id="r-calls">0</div><div class="k">llm calls</div></div>
+    <div class="stat"><div class="v" id="r-skip">0</div><div class="k">skipped by gate</div></div>
+    <div class="stat"><div class="v" id="r-parsefail">0</div><div class="k">parse failures</div></div>
+    <div class="stat"><div class="v" id="r-repairs">0</div><div class="k">repairs</div></div>
+    <div class="stat"><div class="v" id="r-errors">0</div><div class="k">provider errors</div></div>
+    <div class="stat"><div class="v" id="r-wall">-</div><div class="k">wall time</div></div>
+  </div>
+  <main>
+    <div id="batch-empty" class="empty">No finished runs yet -- start one with harness/run_llm.py, or watch it live below.</div>
+    <div id="by-fam" class="by-fam"></div>
+    <div class="section-label" id="grid-label" hidden>Episodes</div>
+    <div id="run-grid" class="grid"></div>
+
+    <div class="section-label" id="live-label" hidden>In progress (no summary yet)</div>
+    <div id="live-grid" class="grid"></div>
+  </main>
+</div>
+
+<script>
+const CAUSES = ["barrage","spot","reactive","sweep","fading","node_loss","congestion","hidden_term"];
+let es = null;
+let current = null;
+let stats = { steps: 0, errors: 0, repairs: 0, cache: 0, latSum: 0, latN: 0 };
+
+function resetStats() { stats = { steps: 0, errors: 0, repairs: 0, cache: 0, latSum: 0, latN: 0 }; }
+
+function fmtPct(v) { return Math.round(v * 100) + "%"; }
+
+function renderCard(rec) {
+  const errCard = !!rec.error;
+  const div = document.createElement("div");
+  div.className = "card" + (errCard ? " err" : "");
+
+  const badges = [];
+  if (rec.parse_mode) badges.push(`<span class="badge ${rec.parse_mode}">${rec.parse_mode}</span>`);
+  if (rec.cache_hit) badges.push(`<span class="badge cache">cache</span>`);
+
+  let beliefHtml = "";
+  if (rec.belief && Object.keys(rec.belief).length) {
+    const sorted = CAUSES.map(c => [c, rec.belief[c] || 0]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    beliefHtml = '<div class="beliefs">' + sorted.map(([c, v]) => `
+      <div class="belief-row">
+        <div class="name">${c}</div>
+        <div class="bar"><i style="width:${Math.max(2, v * 100)}%"></i></div>
+        <div class="pct">${fmtPct(v)}</div>
+      </div>`).join("") + "</div>";
+  }
+
+  div.innerHTML = `
+    <div class="card-top">
+      <span class="step">#${rec.step}</span>
+      <span class="call">${rec.call || "?"}</span>
+      ${badges.join("")}
+      <span class="spacer" style="flex:1"></span>
+      <span class="step">t=${(rec.t_sim ?? 0).toFixed(1)}s</span>
+    </div>
+    ${rec.why ? `<div class="why">${escapeHtml(rec.why)}</div>` : ""}
+    ${beliefHtml}
+    <div class="meta">
+      <span>confidence <b>${fmtPct(rec.confidence || 0)}</b></span>
+      <span>latency <b>${(rec.latency_s || 0).toFixed(1)}s</b></span>
+      ${rec.validation_note ? `<span>note <b>${escapeHtml(rec.validation_note)}</b></span>` : ""}
+    </div>
+    ${rec.error ? `<div class="err-text">${escapeHtml(rec.error)}</div>` : ""}
+  `;
+  return div;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function updateSummary(rec) {
+  stats.steps++;
+  if (rec.error) stats.errors++;
+  if (rec.parse_mode === "repaired") stats.repairs++;
+  if (rec.cache_hit) stats.cache++;
+  if (rec.latency_s) { stats.latSum += rec.latency_s; stats.latN++; }
+
+  document.getElementById("s-steps").textContent = stats.steps;
+  document.getElementById("s-errors").textContent = stats.errors;
+  document.getElementById("s-repairs").textContent = stats.repairs;
+  document.getElementById("s-cache").textContent = stats.cache;
+  document.getElementById("s-lat").textContent = stats.latN ? (stats.latSum / stats.latN).toFixed(1) + "s" : "-";
+
+  if (rec.belief && Object.keys(rec.belief).length) {
+    const top = CAUSES.map(c => [c, rec.belief[c] || 0]).sort((a, b) => b[1] - a[1])[0];
+    const committed = top[1] >= 0.75;
+    document.getElementById("s-verdict").textContent = committed ? top[0] : (top[0] + " ?");
+  }
+}
+
+function connect(name) {
+  if (es) { es.close(); es = null; }
+  current = name;
+  resetStats();
+  const feed = document.getElementById("feed");
+  feed.className = "empty";
+  feed.innerHTML = "waiting for the first decision...";
+  document.getElementById("s-steps").textContent = "0";
+  document.getElementById("s-errors").textContent = "0";
+  document.getElementById("s-repairs").textContent = "0";
+  document.getElementById("s-cache").textContent = "0";
+  document.getElementById("s-lat").textContent = "-";
+  document.getElementById("s-verdict").textContent = "-";
+
+  const dot = document.getElementById("dot"), status = document.getElementById("status");
+  dot.className = "dot"; status.textContent = "connecting";
+
+  es = new EventSource("/api/stream/" + encodeURIComponent(name));
+  es.onopen = () => { dot.className = "dot live"; status.textContent = "live: " + name; };
+  es.onerror = () => { dot.className = "dot dead"; status.textContent = "reconnecting..."; };
+  es.onmessage = (ev) => {
+    let rec;
+    try { rec = JSON.parse(ev.data); } catch { return; }
+    if (feed.className === "empty") { feed.className = ""; feed.innerHTML = ""; }
+    feed.appendChild(renderCard(rec));
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    updateSummary(rec);
+  };
+}
+
+async function refreshEpisodes(selectMostRecent) {
+  const sel = document.getElementById("episode");
+  let list = [];
+  try {
+    const r = await fetch("/api/episodes");
+    list = await r.json();
+  } catch { return; }
+  const prev = sel.value;
+  sel.innerHTML = "";
+  if (!list.length) {
+    sel.innerHTML = "<option value=''>(no episodes yet)</option>";
+    return;
+  }
+  for (const ep of list) {
+    const opt = document.createElement("option");
+    opt.value = ep.episode;
+    opt.textContent = ep.episode;
+    sel.appendChild(opt);
+  }
+  if (list.some(e => e.episode === prev)) {
+    sel.value = prev;
+  } else if (selectMostRecent) {
+    sel.value = list[0].episode;
+    connect(list[0].episode);
+  }
+}
+
+document.getElementById("episode").addEventListener("change", (e) => {
+  if (e.target.value) connect(e.target.value);
+});
+
+refreshEpisodes(true);
+setInterval(() => refreshEpisodes(current === null), 3000);
+
+// ---------------------------------------------------------------- tabs
+let activeTab = "episode";
+let currentRun = null;
+
+function showTab(tab) {
+  activeTab = tab;
+  document.getElementById("tab-episode-btn").classList.toggle("active", tab === "episode");
+  document.getElementById("tab-batch-btn").classList.toggle("active", tab === "batch");
+  document.getElementById("view-episode").hidden = tab !== "episode";
+  document.getElementById("view-batch").hidden = tab !== "batch";
+  const forEpisode = tab === "episode" ? "" : "none";
+  document.getElementById("episode").style.display = forEpisode;
+  document.getElementById("dot").style.display = forEpisode;
+  document.getElementById("status").style.display = forEpisode;
+  document.getElementById("view-label").textContent =
+    tab === "episode" ? "single-episode tail" : "batch runs";
+  if (tab === "batch") { refreshRuns(true); refreshLiveGrid(); }
+}
+document.getElementById("tab-episode-btn").addEventListener("click", () => showTab("episode"));
+document.getElementById("tab-batch-btn").addEventListener("click", () => showTab("batch"));
+
+function goToEpisode(name) {
+  showTab("episode");
+  document.getElementById("episode").value = name;
+  connect(name);
+}
+
+// ---------------------------------------------------------------- batch view
+function fmtPct1(v) { return v === null || v === undefined ? "-" : Math.round(v * 100) + "%"; }
+
+function renderRunSummary(run) {
+  const s = run.summary;
+  document.getElementById("r-episodes").textContent = s.episodes ?? run.episodes.length;
+  document.getElementById("r-acc").textContent = fmtPct1(s.accuracy);
+  document.getElementById("r-oracle").textContent = fmtPct1(s.oracle_agreement);
+  document.getElementById("r-calls").textContent = s.llm_calls ?? 0;
+  document.getElementById("r-skip").textContent = s.calls_skipped_by_gate ?? 0;
+  document.getElementById("r-parsefail").textContent = s.parse_failures ?? 0;
+  document.getElementById("r-repairs").textContent = s.repairs ?? 0;
+  document.getElementById("r-errors").textContent = s.provider_errors ?? 0;
+  document.getElementById("r-wall").textContent = s.wall_s ? Math.round(s.wall_s) + "s" : "-";
+
+  const byFam = document.getElementById("by-fam");
+  byFam.innerHTML = "";
+  const fams = Object.entries(s.by_family || {}).sort((a, b) => b[1].n - a[1].n);
+  for (const [fam, d] of fams) {
+    const row = document.createElement("div");
+    row.className = "by-fam-row";
+    row.innerHTML = `
+      <div class="name">${fam} <span style="opacity:.6">(n=${d.n})</span></div>
+      <div class="bar"><i style="width:${Math.max(2, d.acc * 100)}%"></i></div>
+      <div class="pct">${fmtPct1(d.acc)}</div>`;
+    byFam.appendChild(row);
+  }
+}
+
+function renderRunGrid(run) {
+  const grid = document.getElementById("run-grid");
+  grid.innerHTML = "";
+  document.getElementById("grid-label").hidden = false;
+  const episodes = [...run.episodes].sort((a, b) =>
+    a.family === b.family ? a.seed - b.seed : a.family.localeCompare(b.family));
+  for (const ep of episodes) {
+    const name = `${ep.family}_${ep.seed}`;
+    const card = document.createElement("div");
+    card.className = "rcard " + (!ep.ok ? "" : ep.correct ? "ok" : "miss");
+    card.innerHTML = `
+      <div class="rc-top"><span class="rc-name">${name}</span><span class="rc-fam">${ep.family}</span></div>
+      <div class="rc-meta">
+        ${ep.ok ? (ep.correct ? "&check; " : "&cross; ") + "declared " + escapeHtml(String(ep.declared)) : "ERROR"}<br>
+        calls=${ep.calls ?? "-"} cost=${ep.cost ?? "-"} ${ep.wall_s ? Math.round(ep.wall_s) + "s" : ""}
+      </div>`;
+    card.addEventListener("click", () => goToEpisode(name));
+    grid.appendChild(card);
+  }
+}
+
+async function loadRun(name) {
+  currentRun = name;
+  let run;
+  try {
+    const r = await fetch("/api/run/" + encodeURIComponent(name));
+    run = await r.json();
+  } catch { return; }
+  if (run.error) return;
+  document.getElementById("batch-empty").hidden = true;
+  renderRunSummary(run);
+  renderRunGrid(run);
+}
+
+async function refreshRuns(selectMostRecent) {
+  const sel = document.getElementById("run");
+  let list = [];
+  try {
+    const r = await fetch("/api/runs");
+    list = await r.json();
+  } catch { return; }
+  const prev = sel.value;
+  sel.innerHTML = "";
+  if (!list.length) {
+    sel.innerHTML = "<option value=''>(no finished runs yet)</option>";
+    document.getElementById("batch-empty").hidden = false;
+    document.getElementById("grid-label").hidden = true;
+    document.getElementById("run-grid").innerHTML = "";
+    document.getElementById("by-fam").innerHTML = "";
+    return;
+  }
+  for (const r of list) {
+    const opt = document.createElement("option");
+    opt.value = r.run;
+    opt.textContent = `${r.run} (${r.episodes} episodes)`;
+    sel.appendChild(opt);
+  }
+  if (list.some(r => r.run === prev)) {
+    sel.value = prev;
+  } else if (selectMostRecent) {
+    sel.value = list[0].run;
+    loadRun(list[0].run);
+  }
+}
+document.getElementById("run").addEventListener("change", (e) => {
+  if (e.target.value) loadRun(e.target.value);
+});
+
+async function refreshLiveGrid() {
+  let list = [];
+  try {
+    const r = await fetch("/api/episodes");
+    list = await r.json();
+  } catch { return; }
+  // Episodes already shown (scored) in the currently loaded run don't need a
+  // second, unscored tile -- only show activity for ones not in that set.
+  const known = new Set();
+  if (currentRun) {
+    try {
+      const r = await fetch("/api/run/" + encodeURIComponent(currentRun));
+      const run = await r.json();
+      for (const ep of (run.episodes || [])) known.add(`${ep.family}_${ep.seed}`);
+    } catch { /* ignore */ }
+  }
+  const liveGrid = document.getElementById("live-grid");
+  const liveLabel = document.getElementById("live-label");
+  const fresh = list.filter(e => !known.has(e.episode));
+  liveGrid.innerHTML = "";
+  liveLabel.hidden = fresh.length === 0;
+  const now = Date.now() / 1000;
+  for (const ep of fresh) {
+    const ageS = now - ep.mtime;
+    const card = document.createElement("div");
+    card.className = "rcard live";
+    card.innerHTML = `
+      <div class="rc-top"><span class="rc-name">${ep.episode}</span></div>
+      <div class="rc-meta">${ep.records} decision${ep.records === 1 ? "" : "s"} so far
+        <br>updated ${ageS < 60 ? Math.round(ageS) + "s" : Math.round(ageS / 60) + "m"} ago</div>`;
+    card.addEventListener("click", () => goToEpisode(ep.episode));
+    liveGrid.appendChild(card);
+  }
+}
+
+setInterval(() => { if (activeTab === "batch") { refreshRuns(false); refreshLiveGrid(); } }, 4000);
+</script>
+</body>
+</html>

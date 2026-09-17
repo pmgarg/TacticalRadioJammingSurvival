@@ -1,0 +1,22 @@
+graph LR
+    subgraph OFF["Offline -- ground / lab (NEVER on the drone)"]
+        SC["Scenario sampler<br/>(8 scenarios x topology x fading x load x onset)"] --> SIM["ns-3 episode"]
+        SIM --> OBS["Observation<br/>(sense snapshot plus history features)"]
+        OBS --> TEA["Teacher<br/>(large model, function-calling interface)"]
+        TEA --> ACTX["Chosen test / action / declaration<br/>plus machine-readable rationale"]
+        ACTX --> SIM
+        SIM --> GT["Ground-truth oracle labels"]
+        OBS --> DS[("Trace store")]
+        ACTX --> DS
+        GT --> DS
+        DS --> BC["Behaviour cloning<br/>classifier (posterior over 8 causes)"]
+        DS --> PL["Policy-head fitting<br/>(lookup plus learned corrections)"]
+        DS --> TP["Test-planner fitting<br/>(info-gain-per-cost ordering)"]
+        BC --> STU["Student bundle<br/>(under 512 KB, ONNX/arrays)"]
+        PL --> STU
+        TP --> STU
+    end
+    STU -->|"flash / deploy"| DRONE["On-device agent<br/>student RUNS here, on the drone"]
+    STU --> EVAL["Verifier"]
+    TEA -. same scenarios .-> EVAL
+    BASE["Classical baseline"] -. same scenarios .-> EVAL

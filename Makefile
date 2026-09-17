@@ -40,6 +40,7 @@ g3:                        ## G3 the safety envelope holds, including against a 
 	@echo "== G3  safety + rogue control =="
 	@cd $(CAP) && $(PY) tests/test_agent_safety.py | tail -3
 	@cd $(CAP) && $(PY) tests/test_rogue_control.py | tail -3
+	@cd $(CAP) && $(PY) tests/test_verifier_anchoring.py | tail -3
 
 g2:                        ## G2 percept separation: refsim vs ns-3 fidelity
 	@echo "== G2  fidelity =="

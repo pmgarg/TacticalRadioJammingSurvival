@@ -1,13 +1,29 @@
-# Python bytecode
+# Local-only design workspace — never pushed
+personal/
+
+# Python
 __pycache__/
 *.py[cod]
+.venv/
+venv/
 
-# Session staging artifacts (tarballs used to move code in/out of build containers)
+# OS/editor
+.DS_Store
+Thumbs.db
+
+# Large local artifacts / session staging tarballs
 _scratch/
+*.tar.gz
 
 # Pre-filter trace copies kept only as local evidence of the sweep-family leak.
 # The filtered corpora (train.jsonl / val.jsonl / test.jsonl) are the shipping data.
 *.leaked.jsonl
 
-# Local run scratch
-.DS_Store
+# Generated LLM cache: content-addressed by prompt hash, mechanically
+# regenerable, and redundant with what each DecisionRecord already stores
+# inline (harness/trace.py keeps prompt+response per step) -- not source.
+data/llm_cache/
+data/manual_llm_trace.jsonl
+
+# Claude Code runtime lock file, not project content
+.claude/scheduled_tasks.lock

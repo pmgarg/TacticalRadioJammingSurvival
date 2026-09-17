@@ -1,0 +1,27 @@
+flowchart TB
+    subgraph DRONE["ON DRONE -- student bundle under 512 KB"]
+        direction TB
+        SNS["Sense / Diagnose / Act adapters"]
+        STU["Student<br/>classifier (posterior over 8 causes) + test planner + policy head"]
+        CTL["Agent controller<br/>hypothesis mgr, test selection, action budget, failsafe"]
+    end
+    RAD["L0 radio (classical, unchanged)<br/>MAC / PHY / ARQ / OLSRv1"]
+    subgraph OFF["OFFLINE (lab) -- EAG V3 capstone profile"]
+        direction TB
+        TEA["Teacher (LLM, function-calling, one call per step)"]
+        TRC["Trace store"]
+        DST["Distillation<br/>behaviour cloning (teacher posterior = primary target)"]
+    end
+    NS3["ns-3 world + jammers + ground-truth oracle"]
+    HAR["Harness<br/>planner primitives + run_sim / read_result"]
+    VER["Verifier<br/>deterministic predicates + score.py + mutation sweep"]
+
+    RAD -->|"1 detect anomaly"| SNS
+    SNS -->|"2 features"| STU
+    STU -->|"3 belief + cheapest test or action"| CTL
+    CTL -->|"4 act, verify, escalate"| RAD
+    NS3 --- RAD
+    HAR --> NS3
+    NS3 --> TEA --> TRC --> DST
+    DST -->|"flash bundle"| STU
+    NS3 --> VER

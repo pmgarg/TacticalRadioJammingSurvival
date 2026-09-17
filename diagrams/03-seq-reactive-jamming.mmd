@@ -1,0 +1,18 @@
+sequenceDiagram
+    participant C as Controller
+    participant M as Model
+    participant R as Radio loop
+    R->>C: retry rate spike, PDR about normal
+    C->>M: observation
+    M-->>C: prior favours congestion or reactive, run spectrum_scan
+    C->>R: spectrum_scan
+    R-->>C: energy on active channel, none elsewhere
+    C->>M: updated observation
+    M-->>C: run silent_listen
+    C->>R: silent_listen for 1s
+    R-->>C: noise and retries fall to nominal while silent
+    C->>M: updated observation
+    M-->>C: reactive at 0.86, so change_tdma_slot then set_tx_power down
+    C->>R: apply actions
+    R-->>C: retry rate normalises, PDR recovers
+    Note over C,R: no channel hop, no false jamming declaration

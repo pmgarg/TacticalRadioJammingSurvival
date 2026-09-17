@@ -1,0 +1,33 @@
+flowchart TB
+    subgraph NODE["ON ESP32-S3 NODE"]
+        direction TB
+        RAD["Radio / ESP-NOW + THIN FIXED TDMA SHIM<br/>primary slots + BACKUP slots + CTRL interval<br/>(backup slot doubles as a diagnostic instrument)"]
+        TEL["Telemetry collector (PHY / MAC + slot success / OLSR / App)"]
+        FEAT["Feature engine (SHORT 250-500 ms / MED 1-2 s / LONG 5 s) + history buffer K=8"]
+        ANOM["Anomaly detector (windowed)"]
+        DIAG["Diagnosis / belief: TINY GRU dual-head, or MLP / tree baseline<br/>calibrated posterior over 10 classes (incl NORMAL) + uncertainty / OOD gate"]
+        PLAN["Diagnostic planner (entropy + empirical info-gain per cost table)<br/>tests incl backup_slot_test"]
+        POL["Recovery policy (Filtered Behaviour Cloning)<br/>actions incl USE_BACKUP_SLOT, WAIT_FOR_OLSR, REDUCE_TRAFFIC"]
+        CTL["Deterministic controller<br/>enum / ranges / budget / cooldown / timeout / max-repeat / refusal / input validation"]
+        RVER["Recovery verifier (PDR at least 0.8, stable 2 s)"]
+    end
+    subgraph OFF["OFFLINE (lab) -- EAG V3 harness + ns-3"]
+        direction TB
+        GEN["Scenario generator, then ns-3, then obs + ground truth"]
+        DS["Diagnosis dataset (free GT labels)"]
+        TEP["Teacher episodes, then raw trajectories"]
+        SCO["Outcome scorer + COUNTERFACTUAL action search (a-star = argmin J)"]
+        VES["Verified experience store (A / B / C / D quality tiers)"]
+        FBC["Filtered Behaviour Cloning (plus optional IQL / CQL)"]
+        CAL["Calibration / OOD, then INT8 student bundle"]
+    end
+
+    RAD --> TEL --> FEAT --> ANOM
+    ANOM -->|"nominal"| RAD
+    ANOM -->|"anomaly"| DIAG --> PLAN --> CTL
+    DIAG -->|"confident"| POL --> CTL
+    CTL --> RAD
+    RAD --> RVER --> CTL
+    GEN --> DS --> DIAG
+    GEN --> TEP --> SCO --> VES --> FBC --> CAL
+    CAL -->|"flash bundle"| DIAG
