@@ -26,7 +26,7 @@ def main():
     ap.add_argument("--corpus", default="../data/corpus_all")
     ap.add_argument("--split", default="train")
     ap.add_argument("--ns3", required=True)
-    ap.add_argument("--bundle", default="../data/student_v2/student_bundle.json")
+    ap.add_argument("--bundle", default="../data/student_v9/student_bundle.json")
     ap.add_argument("--out", default="../data/traces_bridge/train.jsonl")
     ap.add_argument("--limit", type=int, default=200)
     a = ap.parse_args()

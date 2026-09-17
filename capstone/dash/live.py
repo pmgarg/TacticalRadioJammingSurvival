@@ -12,7 +12,7 @@ Polls files for new lines/entries rather than using inotify /
 ReadDirectoryChangesW so it behaves identically whether the watched directory
 is native Windows, a WSL path, or a mounted drive.
 
-    python dashboard/server.py --trace-dir ../data/traces/llm --runs-dir ../data --port 8787
+    python dash/live.py --trace-dir ../data/traces/llm --runs-dir ../data --port 8787
 """
 from __future__ import annotations
 

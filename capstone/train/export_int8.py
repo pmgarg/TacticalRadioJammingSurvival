@@ -104,9 +104,9 @@ def declared(P, classes, cost_order, COST):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--bundle", default="../data/student_final/student_bundle.json")
+    ap.add_argument("--bundle", default="../data/student_v9/student_bundle.json")
     ap.add_argument("--traces", default="../data/traces_all/val.jsonl")
-    ap.add_argument("--out", default="../data/student_final")
+    ap.add_argument("--out", default="../data/student_v9")
     a = ap.parse_args()
 
     d = json.load(open(a.bundle))

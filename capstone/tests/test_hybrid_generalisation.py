@@ -49,7 +49,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--corpus", default="../data/corpus")
     ap.add_argument("--split", default="test")
-    ap.add_argument("--bundle", default="../data/student_v8_clean/student_bundle.json")
+    ap.add_argument("--bundle", default="../data/student_v9/student_bundle.json")
     ap.add_argument("--limit", type=int, default=0, help="0 = all")
     a = ap.parse_args()
 

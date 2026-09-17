@@ -49,7 +49,7 @@ def main():
     ap.add_argument("--audit-trace-dir", default=None,
                     help="llm agent only: write one DecisionRecord JSONL per "
                          "episode here (prompt/response/belief per step), same "
-                         "one-file-per-episode convention dashboard/server.py "
+                         "one-file-per-episode convention dash/live.py "
                          "watches -- default data/traces/llm (its own default "
                          "--trace-dir), so a running gen_traces.py --agent llm "
                          "shows up live in the dashboard with no extra setup")

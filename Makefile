@@ -9,7 +9,7 @@ SHELL   := /bin/bash
 PY      ?= python3
 CAP      = capstone
 NS3     ?= $(HOME)/Documents/NS3/ns-3-dev/build/scratch/jamming/ns3.45-jamming-sim-optimized
-BUNDLE  ?= ../data/student_v8_clean/student_bundle.json
+BUNDLE  ?= ../data/student_v9/student_bundle.json
 
 .PHONY: help gates g0 g1 g2 g3 g4 corpus episode dash train eval clean-check
 
@@ -75,8 +75,10 @@ hybrid:                    ## does the hybrid recover the held-out family the ne
 llm-stub:                  ## exercise the whole LLM path with the model STUBBED (CI-safe)
 	cd $(CAP) && $(PY) -m harness.run_llm --per-family 1 --workers 4 --provider stub \
 	  --trace-dir ../data/traces/llm_stub --out ../data/llm_stub.json
+	@# NOT ../data/traces_llm/train.jsonl: that is the REAL teacher corpus and the
+	@# stub would silently overwrite it with fabricated decisions.
 	cd $(CAP) && $(PY) -m train.llm_traces_to_rows --traces ../data/traces/llm_stub \
-	  --split any --out ../data/traces_llm/train.jsonl
+	  --split any --out ../data/traces_llm_stub/train.jsonl
 
 llm:                       ## THE REAL teacher, against authoritative ns-3 (needs your claude CLI)
 	cd $(CAP) && $(PY) -m harness.run_llm --per-family 2 --workers 6 --provider claude \
