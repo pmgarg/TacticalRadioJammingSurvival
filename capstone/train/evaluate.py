@@ -47,6 +47,9 @@ def _episode(sc, agent, world, ns3_bin):
     return Controller(RefSim(sc), sc, agent, CONTRACT).run().to_dict()
 
 
+TEACHER_PROVIDER = "claude"      # set by main(); "stub" makes the arm free for dry runs
+
+
 def _make_agent(which, sc, bundle):
     if which == "baseline":
         return BaselineAgent()
@@ -59,7 +62,7 @@ def _make_agent(which, sc, bundle):
         from gateway.provider import make_provider
         from harness.loop import HarnessAgent
         from harness.trace import TraceStore
-        return HarnessAgent(provider=make_provider("claude"),
+        return HarnessAgent(provider=make_provider(TEACHER_PROVIDER),
                             trace=TraceStore(os.devnull), episode=sc.name, family=sc.family)
     return StudentAgent(bundle)
 
@@ -132,8 +135,14 @@ def main():
                     help="add the privileged oracle as a CEILING (starred, not a competitor)")
     ap.add_argument("--limit-per-family", type=int, default=0,
                     help="cap scenarios per family; the teacher arm costs real calls")
+    ap.add_argument("--teacher-provider", default="claude", choices=["claude", "stub"],
+                    help="stub exercises the whole teacher arm and the agreement metric "
+                         "without billing a single model call -- use it to prove the "
+                         "pipeline before committing to a real run")
     ap.add_argument("--out", default="../data/headline_table.json")
     a = ap.parse_args()
+    global TEACHER_PROVIDER
+    TEACHER_PROVIDER = a.teacher_provider
 
     if a.world == "ns3" and not a.ns3:
         print("--world ns3 needs --ns3 <path to jamming-sim binary>"); sys.exit(2)

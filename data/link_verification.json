@@ -9,7 +9,7 @@
   "link": "L3",
   "what": "refsim -> 56-feature vector",
   "pass": true,
-  "detail": "56 features, all in [-1,1]  [0.0s]"
+  "detail": "56 features, all in [-1,1]  [0.1s]"
  },
  {
   "link": "L5",
@@ -21,7 +21,7 @@
   "link": "L8",
   "what": "student -> controller -> refsim",
   "pass": true,
-  "detail": "6/6 correct, bundle 265.7 KB  [0.5s]"
+  "detail": "6/6 correct, bundle 264.5 KB  [0.5s]"
  },
  {
   "link": "L9",
@@ -36,10 +36,34 @@
   "detail": "declared=fading cost=0.000 fp=False fp_acted=False  [0.1s]"
  },
  {
+  "link": "N1",
+  "what": "ns-3 bridge -> 56-feature vector, S2 and S5 ALIVE",
+  "pass": true,
+  "detail": "S2 noise_delta_base: mean=+0.434 std=0.495, 11/56 features constant  [1.4s]"
+ },
+ {
+  "link": "N2",
+  "what": "ns-3 spectrum sees a DUTY-CYCLED jammer (median, not min-hold)",
+  "pass": true,
+  "detail": "duty=0.7, hottest channel rose +35.9 dB at onset (pre -100.8 -> post -64.9 dBm)  [1.4s]"
+ },
+ {
+  "link": "N3",
+  "what": "ns-3 bridge: information must be BOUGHT (scan_age)",
+  "pass": true,
+  "detail": "2 scans paid for (first at t=8s), 90% of ticks fresh, 0 of them BEFORE paying  [1.4s]"
+ },
+ {
+  "link": "N4",
+  "what": "ns-3 bridge -> verifier -> scored episode",
+  "pass": true,
+  "detail": "declared=fading cost=4.000 survived=True  [1.2s]"
+ },
+ {
   "link": "H1",
   "what": "tool registry generated from contract",
   "pass": true,
-  "detail": "16 tools, contract==api  [0.0s]"
+  "detail": "14 tools, contract==api  [0.0s]"
  },
  {
   "link": "H2",

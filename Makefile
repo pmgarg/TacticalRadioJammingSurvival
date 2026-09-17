@@ -16,7 +16,7 @@ BUNDLE  ?= ../data/student_v9/student_bundle.json
 help:
 	@grep -E '^[a-z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sed 's/:.*## /\t/' | expand -t22
 
-gates: g0 g4 g1 g3 hal g2  ## run every gate, cheapest and most fundamental first
+gates: g0 g4 g1 g3 hal g6 g2  ## run every gate, cheapest and most fundamental first
 	@echo ""
 	@echo "================ ALL GATES GREEN ================"
 
@@ -64,6 +64,12 @@ eval:                      ## three-way comparison on the held-out test split
 train:                     ## retrain the student on the clean split (needs scikit-learn)
 	cd $(CAP) && $(PY) -m train.train_mixed --refsim ../data/traces_all --ns3 ../data/traces_ns3 \
 	  --bridge ../data/traces_bridge/train.jsonl --out ../data/student_next
+
+g6:                        ## G6 the teacher is an LLM and it ran against ns-3
+	@cd $(CAP) && $(PY) tests/test_teacher_provenance.py | tail -4
+
+links:                     ## every edge of the architecture DAG, including the ns-3 bridge
+	@cd $(CAP) && $(PY) harness/verify_links.py | tail -4
 
 hal:                       ## G5 Mode H: build and self-test the hardware port (no hardware needed)
 	cd firmware && cc -std=c11 -Wall -Wextra -O2 -o haltest hal_host.c hal_selftest.c && ./haltest

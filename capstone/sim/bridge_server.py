@@ -209,6 +209,11 @@ def run(scenario_path, ns3_bin: str, agent_name: str = "baseline",
             avail += ["hop_channel", "channel_hop_probe"]
         if used["moves"] < B["max_moves"] and used["costly"] < B["max_costly_actions"]:
             avail += ["move", "mobility_test"]
+        # fallback_to_lora is deliberately NOT offered here. ns-3 models one 2.4 GHz
+        # mesh; there is no second radio to fall back to, so offering the call would let
+        # the agent "recover" by invoking something the world cannot implement. The refsim
+        # controller DOES offer it when the scenario sets lora_available, so barrage
+        # outcomes are not comparable between the two worlds -- recorded, not hidden.
         avail.append("declare_link_lost")
 
         # Percept at 10 Hz, DECISIONS at 1 Hz (design §3). Feed every sample to the
@@ -292,6 +297,16 @@ def run(scenario_path, ns3_bin: str, agent_name: str = "baseline",
         records.append({"t": round(t, 2), "features": list(feats),
                         "call": d.call, "available": list(avail)})
         trace.append({"t": round(t, 2), "top": d.top, "p": round(d.top_p, 3),
+                      # `declared` and `abstained` MUST be here. verify/verifier.py keys on
+                      # them: without `declared` it falls back to argmax, discarding the
+                      # minimum-expected-cost decision the agent actually acted on (AUDIT
+                      # F4.3), and without `abstained` a refusal to classify is scored as a
+                      # claim (F5.1b). agent/controller.py has logged both since those
+                      # fixes; the bridge did not, so every ns-3 episode was scored by a
+                      # different rule than every refsim episode. One verifier, two inputs,
+                      # two truths.
+                      "declared": getattr(d, "declared", None),
+                      "abstained": bool(getattr(d, "abstained", False)),
                       "belief": {k: round(v, 3) for k, v in d.belief.items()},
                       "unrecoverable": round(d.unrecoverable, 3)})
         if d.call != "no_op":

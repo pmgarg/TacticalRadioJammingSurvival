@@ -204,10 +204,28 @@ class HarnessAgent:
     def _panel_of(self, f: list[float]) -> list[float]:
         return [f[i] if i < len(f) else 0.0 for _, i, _ in PANEL]
 
+    F_PDR_FAST, F_T_SINCE_ONSET = 0, 7
+
     def _should_ask(self, f: list[float], ctx: Context) -> tuple[bool, str]:
         panel = self._panel_of(f)
-        # 1. Nothing is wrong: delivery is healthy and no diagnosis is pending.
-        if f[0] >= self.quiet_pdr and self._last_decision is None:
+        # 1. Nothing is wrong: delivery is healthy, the percept layer's anomaly gate has
+        #    NOT fired, and no diagnosis is pending.
+        #
+        #    The onset term is not optional. Judging "is anything wrong" by aggregate PDR
+        #    alone is exactly wrong for the two families whose whole signature is that PDR
+        #    looks fine: a REACTIVE jammer fires only while we transmit, so delivery
+        #    averages out healthy and the damage shows in TIMING (S4'); HIDDEN_TERMINAL
+        #    collides at the receiver while our own load is low. Measured on a stub dry run
+        #    over ns-3: every reactive and hidden_term episode had 30 of 30 ticks
+        #    suppressed as "quiet" and the teacher was never asked a single question about
+        #    them. Two of eight families, ~90 scenarios, would have produced zero rows in a
+        #    full teacher run.
+        #
+        #    t_since_onset is 0.0 until percept/features.py's own gate fires and positive
+        #    after, so it is the purpose-built signal for this and costs no new threshold.
+        onset_fired = f[self.F_T_SINCE_ONSET] > 0.0
+        if (f[self.F_PDR_FAST] >= self.quiet_pdr and not onset_fired
+                and self._last_decision is None):
             return False, "quiet"
         avail = tuple(sorted(ctx.available))
         # 2. Nothing changed: same panel (to the gate), same legal moves.

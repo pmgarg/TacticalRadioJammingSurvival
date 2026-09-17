@@ -96,9 +96,9 @@ def l5():
 @check("L8", "student -> controller -> refsim")
 def l8():
     from agent.student import StudentAgent
-    b = os.path.join(HERE, "..", "data", "student_FINAL", "student_bundle.json")
+    b = os.path.join(HERE, "..", "data", "student_v9", "student_bundle.json")
     if not os.path.exists(b):
-        cand = glob.glob(os.path.join(HERE, "..", "data", "student*", "student_bundle.json"))
+        cand = sorted(glob.glob(os.path.join(HERE, "..", "data", "student*", "student_bundle.json")))
         if not cand:
             return False, "no student bundle on disk"
         b = cand[0]
@@ -107,6 +107,149 @@ def l8():
     hits = sum(int(_episode(lambda sc: stu, f)[1].classification_ok) for f in fams)
     size = os.path.getsize(b) / 1024
     return hits >= len(fams) * 0.6, f"{hits}/{len(fams)} correct, bundle {size:.1f} KB"
+
+
+# ------------------------------------------------------------------ ns-3 bridge
+# The links below cover the LIVE ns-3 path -- the one the LLM teacher and the headline
+# evaluation both run on. Everything above this point exercises refsim only, which is how
+# a bridge that reported a constant -100 dBm on all eight channels for entire episodes
+# passed 9/9 link verification and a 17/17 world gate at the same time.
+
+def _ns3_bin():
+    import glob as _g
+    env = os.environ.get("NS3_BIN")
+    if env and os.path.exists(env):
+        return env
+    for pat in ("/home/claude/ns3/build/scratch/jamming/*jamming-sim*",
+                os.path.expanduser("~/Documents/NS3/ns-3-dev/build/scratch/jamming/*jamming-sim*")):
+        hits = [h for h in _g.glob(pat) if os.access(h, os.X_OK)]
+        if hits:
+            return hits[0]
+    return None
+
+
+def _bridge_episode(agent, family="spot"):
+    """One live ns-3 episode, capturing the feature vectors the agent actually saw."""
+    import glob as _g
+    from sim.bridge_server import run as run_bridge
+    from scenario.schema import load_scenario
+    binp = _ns3_bin()
+    if binp is None:
+        raise RuntimeError("no jamming-sim binary (set NS3_BIN)")
+    files = sorted(_g.glob(os.path.join(HERE, "..", "data", "corpus", "*", f"{family}_*.yaml")))
+    if not files:
+        raise RuntimeError(f"no {family} scenario in the corpus")
+    sc = load_scenario(files[0])
+
+    seen = []
+
+    class _Cap:
+        name = "cap"
+
+        def reset(self):
+            if hasattr(agent, "reset"):
+                agent.reset()
+
+        def decide(self, f, ctx):
+            seen.append(list(f))
+            return agent.decide(f, ctx)
+
+    log = run_bridge(sc, binp, agent_obj=_Cap(), verbose=False)["episode_log"]
+    return sc, log, seen
+
+
+@check("N1", "ns-3 bridge -> 56-feature vector, S2 and S5 ALIVE")
+def n1():
+    """The regression test for the two bridge bugs. A feature that never varies across a
+    whole episode is not a feature; it is a constant the model will learn to ignore."""
+    from agent.baseline import BaselineAgent
+    import numpy as np
+    sc, log, seen = _bridge_episode(BaselineAgent(), "spot")
+    if not seen:
+        return False, "the bridge produced no decisions"
+    F = np.asarray(seen, dtype=float)
+    dead = [i for i in range(F.shape[1]) if F[:, i].std() == 0.0]
+    NOISE, NSTD = 17, 18          # noise_delta_base (S2), noise_std
+    s2_alive = F[:, NOISE].std() > 0.01 and abs(F[:, NOISE]).max() > 0.05
+    return s2_alive, (f"S2 noise_delta_base: mean={F[:, NOISE].mean():+.3f} "
+                      f"std={F[:, NOISE].std():.3f}, {len(dead)}/{F.shape[1]} features constant")
+
+
+@check("N2", "ns-3 spectrum sees a DUTY-CYCLED jammer (median, not min-hold)")
+def n2():
+    """duty<1.0 is the common case in the corpus and the case a min-hold cannot see."""
+    import numpy as np, glob as _g
+    from scenario.schema import load_scenario
+    import sim.bridge_server as B
+    from agent.baseline import BaselineAgent
+    binp = _ns3_bin()
+    if binp is None:
+        return False, "no jamming-sim binary"
+    files = sorted(_g.glob(os.path.join(HERE, "..", "data", "corpus", "*", "spot_*.yaml")))
+    sc = load_scenario(files[0])
+    duty = getattr(sc.jammers[0], "duty", None)
+    states = []
+    orig = B.state_to_obs
+
+    def spy(st, prev, t):
+        states.append(st)
+        return orig(st, prev, t)
+
+    B.state_to_obs = spy
+    try:
+        B.run(sc, binp, agent_obj=BaselineAgent(), verbose=False)
+    finally:
+        B.state_to_obs = orig
+    band = np.asarray([s["band"] for s in states if s.get("band")], dtype=float)
+    ts = np.asarray([s["t"] for s in states if s.get("band")], dtype=float)
+    onset = float(sc.truth.onset_t)
+    pre, post = band[ts < onset], band[ts >= onset]
+    if not len(pre) or not len(post):
+        return False, "episode did not span the jammer onset"
+    rise = post.max(axis=0).max() - pre.max(axis=0).max()
+    return rise > 10.0, (f"duty={duty}, hottest channel rose {rise:+.1f} dB at onset "
+                         f"(pre {pre.max():.1f} -> post {post.max():.1f} dBm)")
+
+
+@check("N3", "ns-3 bridge: information must be BOUGHT (scan_age)")
+def n3():
+    """The agentic premise. If scan features arrive fresh without the agent paying for a
+    spectrum_scan, the contract's diagnose actions are decoration and the student never
+    learns to gather evidence. The CSV corpus hands them out free on 100% of ticks."""
+    import numpy as np
+    from agent.baseline import BaselineAgent
+    sc, log, seen = _bridge_episode(BaselineAgent(), "spot")
+    F = np.asarray(seen, dtype=float)
+    SCAN_AGE = 30
+    # diagnose calls are logged under tests_run, act calls under actions -- count both,
+    # or the check reads "0 scans" for an agent that scanned four times.
+    scans = ([a for a in log.get("actions", []) if a.get("fn") == "spectrum_scan"]
+             + [t for t in log.get("tests_run", []) if t.get("test") == "spectrum_scan"])
+    first_scan_t = min([float(x["t"]) for x in scans], default=None)
+    ts = [float(r["t"]) for r in log.get("classification_trace", [])]
+    fresh = (F[:, SCAN_AGE] < 0.99).mean()
+    if first_scan_t is None:
+        # never scanned: NOTHING may report a fresh scan
+        return fresh < 0.01, f"0 scans paid for, {100*fresh:.0f}% of ticks report a fresh scan"
+    # scanned: freshness must not predate the first paid scan
+    early = sum(1 for t_, f_ in zip(ts, F[:, SCAN_AGE]) if t_ < first_scan_t and f_ < 0.99)
+    return early == 0, (f"{len(scans)} scans paid for (first at t={first_scan_t:.0f}s), "
+                        f"{100*fresh:.0f}% of ticks fresh, {early} of them BEFORE paying")
+
+
+@check("N4", "ns-3 bridge -> verifier -> scored episode")
+def n4():
+    from agent.student import StudentAgent
+    from verify.verifier import score_episode
+    import yaml as _y
+    contract = json.load(open(os.path.join(HERE, "contract", "agent_contract.json")))
+    costcfg = _y.safe_load(open(os.path.join(HERE, "contract", "cost_matrix.yaml")))
+    sc, log, seen = _bridge_episode(StudentAgent(), "barrage")
+    truth = {"cause": sc.truth.cause, "onset_t": sc.truth.onset_t,
+             "recoverable": sc.truth.recoverable}
+    s = score_episode(log, truth, costcfg, contract, sc.family)
+    return s.declared_cause is not None or s.survived, (
+        f"declared={s.declared_cause} cost={s.expected_cost:.3f} survived={s.survived}")
 
 
 @check("L9", "safety envelope (action masking + failsafe)")
@@ -202,6 +345,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--llm", action="store_true", help="include live LLM edges (slow)")
     ap.add_argument("--families", default="barrage,fading,reactive,node_loss")
+    ap.add_argument("--no-ns3", action="store_true",
+                    help="skip the live ns-3 bridge links (they need the built binary)")
     a = ap.parse_args()
 
     print("\nARCHITECTURE DAG — link verification\n" + "=" * 78)
@@ -209,6 +354,11 @@ def main():
     l1(); l3()
     print("\n[agents / controller / verifier]")
     l5(); l8(); l9(); l13()
+    if not a.no_ns3:
+        print("\n[ns-3 bridge — the LIVE path the teacher and the headline table run on]")
+        n1(); n2(); n3(); n4()
+    else:
+        print("\n[ns-3 bridge links skipped — --no-ns3]")
     print("\n[harness]")
     h1(); h2(); h3()
     if a.llm:
@@ -222,8 +372,9 @@ def main():
     print(f"{npass}/{len(RESULTS)} links verified")
     out = os.path.join(HERE, "..", "data", "link_verification.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    json.dump([{"link": l, "what": w, "pass": ok, "detail": d} for l, w, ok, d in RESULTS],
-              open(out, "w"), indent=1)
+    # numpy bools reach here from the ns-3 checks and json refuses them
+    json.dump([{"link": l, "what": w, "pass": bool(ok), "detail": str(d)}
+               for l, w, ok, d in RESULTS], open(out, "w"), indent=1)
     print(f"written: {os.path.relpath(out, HERE)}")
     return 0 if npass == len(RESULTS) else 1
 
