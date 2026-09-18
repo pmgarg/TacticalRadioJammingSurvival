@@ -10,6 +10,8 @@ student, so it drops into controller / gen_traces / dagger / evaluate unchanged.
 """
 from __future__ import annotations
 
+import os
+
 import time
 
 from agent.api import Agent, Context, Decision, CAUSES, normalise, uniform_belief
@@ -184,6 +186,9 @@ class HarnessAgent:
         self.quiet_pdr = quiet_pdr
         self.skipped_quiet = 0
         self.skipped_stable = 0
+        self._quiet_run = 0
+        self._stable_run = 0
+        self.heartbeat_ticks = int(os.environ.get("HARNESS_HEARTBEAT_TICKS", "10"))
         self.parse_failures = 0
         self.repairs = 0
         self.provider_errors = 0
@@ -205,6 +210,7 @@ class HarnessAgent:
         return [f[i] if i < len(f) else 0.0 for _, i, _ in PANEL]
 
     F_PDR_FAST, F_T_SINCE_ONSET = 0, 7
+    F_PDR_REVERSE, F_PEERS_BAD, F_SHADOW = 49, 51, 54
 
     def _should_ask(self, f: list[float], ctx: Context) -> tuple[bool, str]:
         panel = self._panel_of(f)
@@ -223,16 +229,45 @@ class HarnessAgent:
         #
         #    t_since_onset is 0.0 until percept/features.py's own gate fires and positive
         #    after, so it is the purpose-built signal for this and costs no new threshold.
+        #    Forward PDR and the onset gate are still not sufficient on their own. A
+        #    REACTIVE jammer keyed to our transmissions destroys what we SEND, not what we
+        #    receive, so the beacons we hear are untouched and pdr_fast can sit at 1.00 for
+        #    a whole episode while 65% of frames are being lost. Measured on reactive_10016
+        #    (ns-3 reports rxOk=4204 rxErr=7832): pdr_fast mean 0.10 but ranging to 1.00,
+        #    tx_shadow_loss_delta 0.93, pdr_reverse 0.35. The evidence is entirely in the
+        #    TX-side and reverse-link statistics the design added for exactly this family
+        #    (S4' and S13), so the gate has to look at them or it silences the family it
+        #    was built to catch.
         onset_fired = f[self.F_T_SINCE_ONSET] > 0.0
-        if (f[self.F_PDR_FAST] >= self.quiet_pdr and not onset_fired
+        tx_side_bad = (f[self.F_SHADOW] >= 0.30            # S4' TX-shadow loss
+                       or f[self.F_PEERS_BAD] >= 0.30      # S13 peers say they hear us badly
+                       or f[self.F_PDR_REVERSE] <= 0.50)   # they hear us worse than we hear them
+        if (f[self.F_PDR_FAST] >= self.quiet_pdr and not onset_fired and not tx_side_bad
                 and self._last_decision is None):
-            return False, "quiet"
+            # HEARTBEAT. Whatever the gate believes, the teacher must form an opinion on
+            # every episode: a trace with zero decisions teaches the student nothing and
+            # is scored as a miss the teacher was never given the chance to avoid. Chasing
+            # each feature pathology one at a time (pdr, then onset, then the TX-side
+            # statistics) fixed three families and still left reactive seeds silent, so
+            # this bounds the whole class instead: after `heartbeat_ticks` consecutive
+            # suppressed ticks, ask anyway. Costs at most a handful of calls per episode.
+            self._quiet_run += 1
+            if self._quiet_run < self.heartbeat_ticks:
+                return False, "quiet"
+            self._quiet_run = 0
+            return True, ""
+        self._quiet_run = 0
         avail = tuple(sorted(ctx.available))
         # 2. Nothing changed: same panel (to the gate), same legal moves.
         if self._last_panel is not None and avail == self._last_available:
             drift = max(abs(a - b) for a, b in zip(panel, self._last_panel))
             if drift < self.novelty_gate:
-                return False, "stable"
+                self._stable_run += 1
+                if self._stable_run < self.heartbeat_ticks:
+                    return False, "stable"
+                self._stable_run = 0
+                return True, ""
+        self._stable_run = 0
         return True, ""
 
     # ---------------------------------------------------------------- loop

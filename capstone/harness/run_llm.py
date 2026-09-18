@@ -63,7 +63,18 @@ def run_one(args) -> dict:
             log = _L(run_bridge(sc, ns3_bin, agent_obj=ag, verbose=False)["episode_log"])
         else:
             log = Controller(RefSim(sc), sc, ag, contract).run()
-        s = score_episode(log.to_dict(), truth, costcfg, contract, sc.family)
+        _lg = log.to_dict()
+        # A scenario in which the mesh never forms is not a teacher failure.
+        # spot_10046 and a handful of others build a topology where every node reports
+        # peersHeard=0 and rxOk=0 from t=0: there is no link, so the controller never
+        # reaches a decision and the episode ends with an empty classification trace.
+        # scenario.corpus.validate() rejects 98 candidate seeds already but does not catch
+        # these. Scoring them as MISS would charge the LLM for a radio that never worked
+        # and would quietly depress every headline number.
+        if not _lg.get("classification_trace"):
+            raise RuntimeError("degenerate scenario: no link ever formed, "
+                               "so the agent was never asked for a decision")
+        s = score_episode(_lg, truth, costcfg, contract, sc.family)
         out = {"family": fam, "seed": seed, "ok": True,
                # PROVENANCE. DESIGN v2.0 9.2 requires every headline teacher number to come
                # from ns-3, and 9.1 requires a real model. Recording both on the episode is
@@ -102,6 +113,12 @@ def main():
     ap.add_argument("--per-family", type=int, default=2)
     ap.add_argument("--seed0", type=int, default=9100)
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--resume", action="store_true",
+                    help="skip episodes whose trace file already exists and is non-empty. "
+                         "A full-corpus teacher run is hours long and the container it "
+                         "runs in can be reclaimed; without this, a restart begins again "
+                         "from zero. Traces are written incrementally per episode, so an "
+                         "existing non-empty file IS the completed work.")
     ap.add_argument("--episode-timeout-s", type=int, default=1800,
                     help="give up on a single episode after this long; one stuck child "
                          "must not cost the whole run's summary")
@@ -140,6 +157,19 @@ def main():
             seed += 1
     print(f"{len(jobs)} episodes, {a.workers} workers "
           f"({rejected} candidate seeds rejected by scenario validation)\n")
+
+    if a.resume:
+        keep, skipped = [], 0
+        for j in jobs:
+            tf = os.path.join(a.trace_dir, f"{j[0]}_{j[1]}.jsonl")
+            if os.path.exists(tf) and os.path.getsize(tf) > 0:
+                skipped += 1
+            else:
+                keep.append(j)
+        print(f"resume: {skipped} episodes already have traces, {len(keep)} to run")
+        jobs = keep
+        if not jobs:
+            print("nothing left to run")
 
     res, t0 = [], time.time()
     with ProcessPoolExecutor(max_workers=a.workers) as ex:
