@@ -130,36 +130,51 @@ def score_episode(log: dict, truth: dict, cost_cfg: dict,
                  if r["p"] >= th["act_confidence"] and not r.get("abstained")]
     acts = [a for a in log.get("actions", []) if a["fn"] != "declare_link_lost"]
     rec_t = log.get("recovery_t")
-    # The action that plausibly CAUSED the recovery: the episode's LAST recovery action,
-    # with recovery following it. "Last" is doing the work. A mid-episode `recovery_t` is
-    # not proof that the action before it was the fix -- a reactive jammer is intermittent,
-    # so PDR recovers between bursts and reactive_10192 reports recovery_t=14.0 while the
-    # incident runs to t=40. But an agent that acted, recovered, and then stopped acting
-    # did fix it, and the belief that drove that action is the claim being scored.
+
+    # WHICH action embodies the claim: the LAST one, not the first.
+    #
+    # Walking forward and stopping at the first qualifying action scores the agent on its
+    # opening move. barrage_20000: the teacher hedges `fading` at t=7 and bumps TX power,
+    # a spurious recovery_t=9.0 fires (a reactive/barrage link flaps), and it then spends
+    # four spectrum_scans, concludes `barrage` at p=0.85 and holds it for seventeen ticks
+    # before declaring the link lost -- the correct call for an unrecoverable barrage. The
+    # forward walk scored that episode `fading`. An agent that investigates and changes its
+    # mind is doing the job; the claim is what it ENDED on, not what it opened with.
+    #
+    # declare_link_lost is included here. It is scored separately AS A REFUSAL, but it is
+    # also a budget-spending commitment, and for an unrecoverable barrage it is the correct
+    # remedy -- excluding it made the agent's final, correct commitment invisible.
+    acts = list(log.get("actions", []))
     causal = acts[-1] if (rec_t is not None and acts and acts[-1]["t"] <= rec_t) else None
 
     final = None
-    for a in acts:
+    for a in reversed(acts):
         prior = [(i, r) for i, r in confident if r["t"] <= a["t"]]
         if not prior:
             continue
         # carry the index rather than recovering it with trace.index(anchor): that
         # compares dicts by value and would return the FIRST equal tick, not this one.
         i, anchor = prior[-1]
-        sustained = (i + 1 < len(trace) and claim(trace[i + 1]) == claim(anchor)
-                     and trace[i + 1]["p"] >= th["act_confidence"])
+        # "Not a single-tick flicker" means the belief survives into the next tick -- OR
+        # there is no next tick. A belief held to the END of the episode cannot flicker;
+        # requiring a successor made every correct FINAL diagnosis unanchorable, which is
+        # exactly the shape of a good episode (investigate, conclude, act, stop).
+        last_tick = (i + 1 >= len(trace))
+        # The successor test asks "did it CHANGE ITS MIND", not "did confidence stay
+        # high". Requiring trace[i+1]["p"] >= act_confidence too made a confidence dip on
+        # an UNCHANGED belief look like a flicker: the real barrage_20000 teacher holds
+        # `barrage` while its confidence oscillates 0.85 / 0.45 / 0.55 / 0.85, and the
+        # episode scored `fading` because of the dip after its best tick. The confidence
+        # bar is already enforced on the ANCHOR itself via `confident`.
+        sustained = last_tick or claim(trace[i + 1]) == claim(anchor)
         if sustained or (causal is not None and a is causal):
             final = claim(anchor)
             break
     if final is None and confident:
-        # Fall back to the last confident classification, full stop. An earlier version of
-        # this truncated the fallback at recovery_t on the same "drift after resolution is
-        # not a new claim" reasoning -- which is right when recovery ends the incident and
-        # WRONG when it is a spurious intermittent recovery. reactive_10192: recovery_t is
-        # 14.0, the agent is confused until t=14, then says `reactive` at p=1.00 for the
-        # next 25 s and is scored `hidden_term`. Truncating threw away 25 s of a correct,
-        # confident diagnosis. Without an action to attribute it to, recovery_t is not
-        # evidence about which claim the agent committed to.
+        # Fall back to the last confident classification, full stop. An earlier version
+        # truncated this at recovery_t on "drift after resolution is not a new claim" --
+        # right when recovery ends the incident, wrong when it is a spurious intermittent
+        # one. reactive_10192 reports recovery_t=14.0 while the incident runs to t=40.
         final = claim(confident[-1][1])
     classification_ok = (final == true_cause)
 

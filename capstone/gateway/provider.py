@@ -43,6 +43,19 @@ class LlmError(RuntimeError):
     pass
 
 
+# Failures worth replaying: the process died, was overloaded, or timed out. A refusal or a
+# malformed *reply* is NOT transient -- that is the parser's business, and retrying it
+# would be the hidden second opinion the design forbids.
+_TRANSIENT = ("exited 1", "exited -", "timeout after", "overloaded", "rate limit",
+              "rate_limit", "429", "500", "502", "503", "529", "connection",
+              "non-JSON output")
+
+
+def _transient(e: Exception) -> bool:
+    m = str(e).lower()
+    return any(t.lower() in m for t in _TRANSIENT)
+
+
 class ClaudeCliProvider:
     """Routes prompts through the locally authenticated Claude Code CLI (`claude -p`)."""
 
@@ -61,6 +74,9 @@ class ClaudeCliProvider:
         self.calls = 0
         self.cache_hits = 0
         self.errors = 0
+        self.retries = 0
+        self.max_attempts = int(os.environ.get("LLM_MAX_ATTEMPTS", "4"))
+        self.backoff_s = float(os.environ.get("LLM_BACKOFF_S", "2.0"))
         self.total_wall_s = 0.0
         self.total_input_tokens = 0
         self.total_output_tokens = 0
@@ -74,10 +90,45 @@ class ClaudeCliProvider:
         return os.path.join(CACHE_DIR, h + ".json")
 
     def complete(self, prompt: str) -> str:
+        """Cache -> call -> (bounded transport retry) -> cache.
+
+        THE RETRY IS TRANSPORT-LEVEL AND IT IS NOT THE PARSE REPAIR.
+        DESIGN section 5 commits to "no hidden retries": one parse repair, recorded as
+        parse_mode "repaired", then abstain. That governs what to do with a reply the model
+        actually produced, and it is unchanged -- harness/parser.py still gets exactly one
+        repair. This is the other failure: no reply was produced at all, because the CLI
+        died. Replaying an unanswered prompt is not a second opinion, it is the first one.
+
+        Why it is needed: at 32 concurrent CLI processes, 64.6% of teacher decisions came
+        back "claude exited 1" in a full-corpus run -- 766 of 1186. The identical prompt
+        replayed on its own returned a clean, correct answer, so nothing was wrong with the
+        prompt or the model; the failure is purely contention. Measured after: 16/16 at
+        4, 8 and 16 workers. Concurrency is now capped AND transient failures are retried,
+        because 540 episodes x ~20 calls turns even a 1% failure rate into 100+ silently
+        lost decisions, each one an abstention the verifier has to score.
+
+        Retries are counted (`self.retries`) so they appear in the run summary rather than
+        hiding a degraded provider behind a healthy-looking result.
+        """
         path = self._key(prompt)
         if self.cache and os.path.exists(path):
             self.cache_hits += 1
             return json.load(open(path))["response"]
+
+        last = None
+        for attempt in range(self.max_attempts):
+            if attempt:
+                self.retries += 1
+                time.sleep(self.backoff_s * (2 ** (attempt - 1)))
+            try:
+                return self._complete_once(prompt, path)
+            except LlmError as e:
+                last = e
+                if not _transient(e):
+                    raise
+        raise LlmError(f"{self.max_attempts} attempts failed; last: {last}")
+
+    def _complete_once(self, prompt: str, path: str) -> str:
 
         cmd = [CLAUDE_BIN, "-p", "--output-format", "json", "--tools", "",
                "--model", self.model]

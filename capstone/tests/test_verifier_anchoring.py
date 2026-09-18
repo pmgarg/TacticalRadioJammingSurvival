@@ -61,6 +61,20 @@ CASES = [
              [{"t": 11, "fn": "set_tx_power"}], recovery_t=12.0),
      "fading", "fading"),
 
+    ("investigate-and-revise: the claim is what the agent ENDED on",
+     # barrage_20000, real. The teacher hedges `fading` and bumps TX power at t=7, a
+     # spurious recovery_t=9 fires, and it then spends four spectrum_scans, concludes
+     # `barrage` at p=0.85, holds it for seventeen ticks and declares the link lost --
+     # the correct remedy for an unrecoverable barrage. Anchoring to the FIRST action
+     # scored the whole episode `fading`. An agent that investigates and changes its mind
+     # is doing the job.
+     episode([tick(7, "fading", 0.80), tick(8, "fading", 0.80), tick(16, "fading", 0.80),
+              tick(18, "barrage", 0.85), tick(22, "barrage", 0.85),
+              tick(34, "barrage", 0.85)],
+             [{"t": 7, "fn": "set_tx_power"}, {"t": 35, "fn": "declare_link_lost"}],
+             recovery_t=9.0),
+     "barrage", "barrage"),
+
     ("spurious mid-episode recovery must not truncate the fallback",
      # reactive_10192: recovery_t=14 is a gap between jammer bursts, not the end of the
      # incident. The agent is confused until 14, then correct at p=1.00 for 20 more
