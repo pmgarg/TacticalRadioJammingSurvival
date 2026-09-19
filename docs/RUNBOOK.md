@@ -177,9 +177,9 @@ survive, and rejects are recorded in the audit file rather than silently dropped
 ```bash
 python3 train/train_mixed.py --out ../data/student_vX --llm ../data/traces_llm_full/all.jsonl --llm-weight 3
 python3 train/calibrate_abstain.py --bundle ../data/student_vX/student_bundle.json \
-    --calib ../data/traces_ns3_v2/val.jsonl --ood ../data/traces_ns3_v2/test.jsonl --write
+    --calib ../data/traces_ns3/val.jsonl --ood ../data/traces_ns3/test.jsonl --write
 python3 train/export_int8.py --bundle ../data/student_vX/student_bundle.json \
-    --traces ../data/traces_ns3_v2/val.jsonl --out ../data/student_vX
+    --traces ../data/traces_ns3/val.jsonl --out ../data/student_vX
 ```
 
 Calibrate on the **deployment** world (ns-3), never the pooled set — pooling with refsim

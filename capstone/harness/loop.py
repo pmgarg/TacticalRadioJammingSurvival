@@ -131,7 +131,20 @@ def _level(v: float) -> str:
     return "HIGH" if v >= 0.45 else "low " if v <= -0.45 else "mid "
 
 
-def render_panel(f: list[float], ctx: Context, reg: ToolRegistry) -> str:
+def render_legend() -> str:
+    """The `meaning` column, once.
+
+    It is identical on every call, so in lean mode it belongs in the cached system prompt
+    rather than being re-sent beside every row of every panel ~9,500 times."""
+    out = ["FEATURE LEGEND  (percentages are native; signed values are normalised: "
+           "-1 low, 0 nominal, +1 high)"]
+    for name, _idx, desc in PANEL:
+        out.append(f"  {name:<24} {desc}")
+    return "\n".join(out)
+
+
+def render_panel(f: list[float], ctx: Context, reg: ToolRegistry,
+                 with_meaning: bool = True) -> str:
     """Features as a readable table, plus the live tool catalogue with prices.
 
     Handing a language model a bare float vector throws away the only thing it is good
@@ -152,13 +165,18 @@ def render_panel(f: list[float], ctx: Context, reg: ToolRegistry) -> str:
     head.append("")
     head.append(reg.render_catalogue(ctx.available))
     head.append("")
-    head.append("TELEMETRY   percentages are native; signed values are normalised "
-                "(-1 = low, 0 = nominal, +1 = high)")
-    head.append(f"{'feature':<24}{'value':>7}  lvl    meaning")
+    if with_meaning:
+        head.append("TELEMETRY   percentages are native; signed values are normalised "
+                    "(-1 = low, 0 = nominal, +1 = high)")
+        head.append(f"{'feature':<24}{'value':>7}  lvl    meaning")
+    else:
+        head.append("TELEMETRY   (see the FEATURE LEGEND in your instructions)")
+        head.append(f"{'feature':<24}{'value':>7}  lvl")
     for name, idx, desc in PANEL:
         if idx < len(f):
             v = f[idx]
-            head.append(f"{name:<24}{_decode(idx, v):>7} {_bar(v)}{_level(v)}  {desc}")
+            row = f"{name:<24}{_decode(idx, v):>7} {_bar(v)}{_level(v)}"
+            head.append(f"{row}  {desc}" if with_meaning else row)
     return "\n".join(head)
 
 
@@ -188,7 +206,17 @@ class HarnessAgent:
         self.skipped_stable = 0
         self._quiet_run = 0
         self._stable_run = 0
+        self._asked = 0
         self.heartbeat_ticks = int(os.environ.get("HARNESS_HEARTBEAT_TICKS", "10"))
+        # A HARD per-episode call budget. The novelty gate is an L-inf distance on the
+        # panel, and in `fading` the RSSI drifts continuously, so the panel never looks
+        # "stable" and the gate asks on nearly every tick: measured 65, 76 and 81 calls in
+        # single episodes against ~20 for every other family, at 1110-1443s of wall clock
+        # each. One family was consuming several times the corpus budget and stalling the
+        # run. Past the cap the agent holds its last belief rather than buying more of the
+        # same evidence -- which is exactly what the event gate exists to do anyway.
+        self.max_calls_per_episode = int(os.environ.get("HARNESS_MAX_CALLS", "30"))
+        self.lean = os.environ.get("HARNESS_LEAN", "1") != "0"
         self.parse_failures = 0
         self.repairs = 0
         self.provider_errors = 0
@@ -196,6 +224,9 @@ class HarnessAgent:
 
     def reset(self) -> None:
         self.step = 0
+        self._asked = 0          # the per-episode call budget is PER EPISODE
+        self._quiet_run = 0
+        self._stable_run = 0
         self._last_panel: list[float] | None = None
         self._last_decision: Decision | None = None
         self._last_available: tuple = ()
@@ -214,6 +245,8 @@ class HarnessAgent:
 
     def _should_ask(self, f: list[float], ctx: Context) -> tuple[bool, str]:
         panel = self._panel_of(f)
+        if self._asked >= self.max_calls_per_episode:
+            return False, "stable"
         # 1. Nothing is wrong: delivery is healthy, the percept layer's anomaly gate has
         #    NOT fired, and no diagnosis is pending.
         #
@@ -275,6 +308,8 @@ class HarnessAgent:
         self.step += 1
 
         ask, why_not = self._should_ask(features, ctx)
+        if ask:
+            self._asked += 1
         if not ask:
             if why_not == "quiet":
                 self.skipped_quiet += 1
@@ -292,8 +327,28 @@ class HarnessAgent:
 
         self._last_panel = self._panel_of(features)
         self._last_available = tuple(sorted(ctx.available))
-        prompt = SYSTEM.split("Reply with ONLY")[0].rstrip() + "\n\n" \
-            + render_panel(features, ctx, self.reg) + "\n\n" + REPLY_SPEC
+        # TOKEN BUDGET. The prompt is ~2,730 tokens, and ~72% of it -- the hypotheses, the
+        # tool catalogue, the cost explanation and the STEP 1/2/3 reasoning guide -- is
+        # byte-identical on every one of ~9,500 calls. Only the telemetry panel changes.
+        #
+        # In lean mode the static part is sent as a SYSTEM PROMPT instead of being glued
+        # onto the user turn. The provider hands it to the CLI via --system-prompt, so the
+        # API prompt-cache serves it at cache-read price on every call after the first, and
+        # the per-call NEW input drops to just the panel (~750 tokens). Sending the same
+        # 2,000 tokens of instructions 9,500 times as fresh input is the definition of an
+        # agent using its model badly.
+        #
+        # Set HARNESS_LEAN=0 to go back to one combined prompt (the two are not
+        # cache-compatible: the provider's SHA-256 key covers the system prompt, so
+        # switching invalidates cached replies -- never switch mid-corpus).
+        static = SYSTEM.split("Reply with ONLY")[0].rstrip()
+        if self.lean:
+            system = static + "\n\n" + render_legend() + "\n\n" + REPLY_SPEC
+            prompt = render_panel(features, ctx, self.reg, with_meaning=False)
+        else:
+            system = None
+            prompt = (static + "\n\n" + render_panel(features, ctx, self.reg)
+                      + "\n\n" + REPLY_SPEC)
 
         rec = DecisionRecord(episode=self.episode, step=self.step, t_sim=ctx.t,
                              agent=self.name, scenario_family=self.family, prompt=prompt)
@@ -301,7 +356,7 @@ class HarnessAgent:
         before_hits = self.p.cache_hits
         t0 = time.time()
         try:
-            raw = self.p.complete(prompt)
+            raw = self.p.complete(prompt, system=system)
         except LlmError as e:
             self.provider_errors += 1
             rec.error, rec.parse_mode, rec.latency_s = str(e)[:200], "failed", time.time() - t0

@@ -36,11 +36,11 @@ def check(ok: bool, name: str, detail: str = "") -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--golden", default="../data/llm_golden_ns3_full.json")
-    ap.add_argument("--traces", default="../data/traces/llm_ns3_full")
-    ap.add_argument("--min-episodes", type=int, default=24)
+    ap.add_argument("--golden", default="../data/llm_golden_full.json")
+    ap.add_argument("--traces", default="../data/traces/llm_full")
+    ap.add_argument("--min-episodes", type=int, default=400)
     ap.add_argument("--min-families", type=int, default=8)
-    ap.add_argument("--min-real-calls", type=int, default=100)
+    ap.add_argument("--min-real-calls", type=int, default=1000)
     a = ap.parse_args()
 
     print("=" * 70)
@@ -95,7 +95,20 @@ def main() -> None:
           f"offenders: {offenders}" if offenders else "clean")
 
     # --- 7. the traces on disk match the claim ------------------------------------
+    # The 540 raw teacher traces ship as data/llm_traces_full.tgz (3.7 MB) rather than as
+    # 540 loose files (119 MB). If the directory is absent, read them straight out of the
+    # archive -- the gate must verify the shipped artefact, not a working copy that may or
+    # may not have been unpacked.
     files = sorted(glob.glob(os.path.join(a.traces, "*.jsonl")))
+    if not files:
+        import tarfile, tempfile
+        tgz = os.path.join(HERE, "..", "data", "llm_traces_full.tgz")
+        if os.path.exists(tgz):
+            tmp = tempfile.mkdtemp()
+            with tarfile.open(tgz) as tf:
+                tf.extractall(tmp)
+            files = sorted(glob.glob(os.path.join(tmp, "**", "*.jsonl"), recursive=True))
+            print(f"  (traces read from {os.path.basename(tgz)}: {len(files)} episodes)")
     ticks = real = 0
     for f in files:
         for line in open(f):

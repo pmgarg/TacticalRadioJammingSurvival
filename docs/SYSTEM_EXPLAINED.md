@@ -247,8 +247,8 @@ The student is **two things plus a controller**, and none of them calls a model.
 Induced by the LLM, then **measured** and kept only if it survives:
 
 ```bash
-python3 harness/induce.py --from-rows ../data/traces_ns3_v2/train.jsonl \
-    --holdout-rows ../data/traces_ns3_v2/val.jsonl --rows 80 --out ../data/policy_ns3.json
+python3 harness/induce.py --from-rows ../data/traces_ns3/train.jsonl \
+    --holdout-rows ../data/traces_ns3/val.jsonl --rows 80 --out ../data/policy_ns3.json
 ```
 
 The LLM proposes candidate rules in a tiny DSL; every candidate is measured on a **held-out**
@@ -290,9 +290,9 @@ python3 train/llm_traces_to_rows.py --traces ../data/traces/llm_full --split tra
 python3 train/train_mixed.py --out ../data/student_v10 \
     --llm ../data/traces_llm_full/train.jsonl --llm-weight 3
 python3 train/calibrate_abstain.py --bundle ../data/student_v10/student_bundle.json \
-    --calib ../data/traces_ns3_v2/val.jsonl --ood ../data/traces_ns3_v2/test.jsonl --write
+    --calib ../data/traces_ns3/val.jsonl --ood ../data/traces_ns3/test.jsonl --write
 python3 train/export_int8.py --bundle ../data/student_v10/student_bundle.json \
-    --traces ../data/traces_ns3_v2/val.jsonl --out ../data/student_v10
+    --traces ../data/traces_ns3/val.jsonl --out ../data/student_v10
 ```
 
 The last step writes **`student_weights.h`** (55.5 KB) — the C header you compile into the

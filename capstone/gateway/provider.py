@@ -89,7 +89,7 @@ class ClaudeCliProvider:
             + prompt.encode()).hexdigest()[:32]
         return os.path.join(CACHE_DIR, h + ".json")
 
-    def complete(self, prompt: str) -> str:
+    def complete(self, prompt: str, system: str | None = None) -> str:
         """Cache -> call -> (bounded transport retry) -> cache.
 
         THE RETRY IS TRANSPORT-LEVEL AND IT IS NOT THE PARSE REPAIR.
@@ -110,6 +110,8 @@ class ClaudeCliProvider:
         Retries are counted (`self.retries`) so they appear in the run summary rather than
         hiding a degraded provider behind a healthy-looking result.
         """
+        if system is not None:
+            self.system = system      # enters the cache key via _key()
         path = self._key(prompt)
         if self.cache and os.path.exists(path):
             self.cache_hits += 1
@@ -133,7 +135,10 @@ class ClaudeCliProvider:
         cmd = [CLAUDE_BIN, "-p", "--output-format", "json", "--tools", "",
                "--model", self.model]
         if self.system:
-            cmd += ["--append-system-prompt", self.system]
+            # --system-prompt REPLACES the Claude Code CLI's own system prompt and
+            # tool catalogue. Appending would keep ~25K tokens of agent scaffold we
+            # have no use for: this is a text-completion call, not a coding session.
+            cmd += ["--system-prompt", self.system]
 
         t0 = time.time()
         try:
@@ -229,7 +234,7 @@ class StubProvider:
         self.calls = 0
         self.cache_hits = 0
 
-    def complete(self, prompt: str) -> str:
+    def complete(self, prompt: str, system: str | None = None) -> str:
         self.calls += 1
         import json as _json
 

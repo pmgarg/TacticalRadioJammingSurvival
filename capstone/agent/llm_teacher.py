@@ -52,6 +52,16 @@ PANEL = [
     ("tx_defer_time", 53, "wait for a clear channel (congestion/hidden -> high)"),
     ("tx_shadow_loss_delta", 54, "extra loss right after OUR transmissions (reactive -> high)"),
     ("silent_loss_rate", 55, "loss while we were silent (read shadow delta against this)"),
+    # --- added by train/analyse_failures.py, 2026-09-19 -------------------------------
+    # These six were NOT shown to the teacher, yet each separates one of its most common
+    # confusions on the labelled ns-3 corpus (AUC-separability in brackets). The teacher
+    # was being asked to distinguish classes using evidence it had never been given.
+    ("noise_now", 16, "absolute noise floor now (barrage vs congestion: 1.00)"),
+    ("noise_std", 18, "how much the floor MOVES (steady emitter vs bursty traffic: 0.92)"),
+    ("retries_per_success", 25, "retries per delivered frame (fading vs reactive: 1.00)"),
+    ("outage_duty", 38, "fraction of time fully out (hidden_term vs reactive)"),
+    ("outage_period", 39, "spacing of outages (periodic = sweep/reactive: 0.96)"),
+    ("scan_best_alt_margin", 34, "how much quieter the best other channel is (spot vs barrage: 1.00)"),
 ]
 
 SYSTEM = """You are the diagnostic agent on a drone whose mesh radio link is failing.
