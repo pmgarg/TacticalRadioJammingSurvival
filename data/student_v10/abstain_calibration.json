@@ -1,15 +1,15 @@
 {
  "calib": "../data/traces_ns3_v2/val.jsonl",
  "n_calib": 3458,
- "calib_accuracy": 0.9303065355696934,
+ "calib_accuracy": 0.9473684210526315,
  "target_err": 0.1,
  "threshold": 0.0,
  "retained_frac": 1.0,
- "retained_err": 0.06969346443030655,
+ "retained_err": 0.052631578947368474,
  "ood": "../data/traces_ns3_v2/test.jsonl",
  "abstain_in_dist": 0.0,
  "abstain_held_out": 0.0,
- "acc_in_dist": 0.9185297461159531,
+ "acc_in_dist": 0.9272451686244789,
  "acc_held_out": 0.0,
  "detects_novelty": false
 }

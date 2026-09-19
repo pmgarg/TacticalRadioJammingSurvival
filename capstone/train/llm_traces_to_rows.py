@@ -27,13 +27,57 @@ import glob
 import json
 import os
 import sys
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from scenario.split import split_of, family_of   # noqa: E402
 
-CAUSES = {"barrage", "spot", "reactive", "sweep", "fading",
-          "node_loss", "congestion", "hidden_term"}
+_TRUTH_CACHE: dict[str, str] = {}
+
+
+CAUSES_SET = {"barrage", "spot", "reactive", "sweep", "fading",
+              "node_loss", "congestion", "hidden_term"}
+
+
+def truth_cause_of(episode: str, fam: str) -> str:
+    """The scenario's declared truth.cause.
+
+    Falling back to the family name is only safe for families that ARE causes. `refusal`
+    is not: a refusal scenario is an UNRECOVERABLE BARRAGE whose correct outcome is to
+    declare the link lost. Guessing here poisons the label, and the guess that was there
+    ("fading") is the most expensive wrong answer in the cost matrix.
+
+    Scenarios are reproducible from (family, seed), so the truth is recovered by rebuilding
+    the scenario rather than by parsing its name."""
+    if episode in _TRUTH_CACHE:
+        return _TRUTH_CACHE[episode]
+    stem = episode.rsplit("#", 1)[0]
+    seed = stem.rsplit("_", 1)[-1]
+    cause = None
+    if seed.isdigit():
+        try:
+            from scenario.corpus import make
+            cause = make(fam, int(seed)).truth.cause
+        except Exception:
+            cause = None
+    if cause not in CAUSES_SET:
+        import glob as _g
+        import yaml as _y
+        for fp in _g.glob(os.path.join(HERE, "..", "data", "corpus", "*", episode + ".yaml")):
+            try:
+                cause = _y.safe_load(open(fp))["truth"]["cause"]
+            except Exception:
+                pass
+    if cause not in CAUSES_SET:
+        if fam in CAUSES_SET:
+            cause = fam
+        else:
+            raise SystemExit(
+                f"cannot determine the true cause of {episode!r} (family {fam!r}); "
+                f"refusing to guess -- a wrong cause label is worse than no row")
+    _TRUTH_CACHE[episode] = cause
+    return cause
 
 
 def main() -> None:
@@ -77,7 +121,16 @@ def main() -> None:
             if float(r.get("confidence", 0.0)) < a.min_confidence:
                 skipped["below --min-confidence"] += 1
                 continue
-            cause = fam if fam in CAUSES else "fading"
+            # THE CAUSE MUST COME FROM THE SCENARIO, NOT FROM ITS FAMILY NAME.
+            # This line used to read `fam if fam in CAUSES else "fading"`. The `refusal`
+            # family is not a cause -- a refusal scenario is an UNRECOVERABLE BARRAGE whose
+            # correct outcome is to declare the link lost -- so every refusal row silently
+            # took the fallback and was labelled `fading`. 912 of 5,545 teacher rows, 16%
+            # of the corpus, taught the student that an unrecoverable barrage is fading:
+            # the single most expensive confusion in contract/cost_matrix.yaml (10x), and
+            # the exact false positive the whole project exists to avoid. It is also why
+            # student_v10 regressed on refusal, 3/3 -> 1/3.
+            cause = truth_cause_of(episode, fam)
             rows.append({
                 "scenario": episode, "family": fam,
                 # cause: the simulator's free label, NOT the teacher's guess (see docstring)

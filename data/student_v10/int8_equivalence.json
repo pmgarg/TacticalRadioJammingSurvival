@@ -1,13 +1,13 @@
 {
  "cause": {
-  "argmax_agreement": 0.9982648930017352,
-  "declared_agreement_on_acted": 0.9985540775014459,
+  "argmax_agreement": 0.9991324465008675,
+  "declared_agreement_on_acted": 0.9988432620011567,
   "acted_frac": 1.0,
   "flips_to_act": 0,
   "flips_to_abstain": 0,
   "gate": "declared-class agreement on acted ticks",
-  "gate_stat": 0.9985540775014459,
-  "mean_l1": 0.0066216024570167065,
+  "gate_stat": 0.9988432620011567,
+  "mean_l1": 0.005219368729740381,
   "plan": "all int8",
   "passes": true
  },
