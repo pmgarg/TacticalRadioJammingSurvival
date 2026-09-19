@@ -27,3 +27,4 @@ data/manual_llm_trace.jsonl
 
 # Claude Code runtime lock file, not project content
 .claude/scheduled_tasks.lock
+data/traces/llm_full/
