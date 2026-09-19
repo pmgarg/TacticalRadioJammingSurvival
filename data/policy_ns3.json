@@ -1,0 +1,120 @@
+{
+ "version": "v1",
+ "provenance": "claude-cli induction, held-out validated",
+ "rules": [
+  {
+   "id": "barrage_wideband_jam",
+   "clauses": [
+    [
+     "energy_no_preamble",
+     ">",
+     0.3
+    ],
+    [
+     "scan_bad_frac",
+     ">",
+     0.0
+    ],
+    [
+     "scan_noise_spread",
+     "<",
+     0.2
+    ]
+   ],
+   "then": {
+    "hypothesis": "barrage"
+   },
+   "note": "Wideband emitter pushes busy-energy-without-preamble high and makes every scanned channel equally bad (low inter-channel spread) \u2014 direct emitter evidence, not a symptom-only call.",
+   "support": 29,
+   "precision": 1.0
+  },
+  {
+   "id": "spot_narrowband_jam",
+   "clauses": [
+    [
+     "energy_no_preamble",
+     ">",
+     0.3
+    ],
+    [
+     "scan_bad_frac",
+     ">",
+     0.0
+    ],
+    [
+     "scan_noise_spread",
+     ">=",
+     0.2
+    ]
+   ],
+   "then": {
+    "hypothesis": "spot"
+   },
+   "note": "Selective emitter raises noise/energy on only some channels, so a scan shows a few very hot channels among clean ones (high inter-channel spread) unlike barrage's uniform hit.",
+   "support": 18,
+   "precision": 1.0
+  },
+  {
+   "id": "fading_no_emitter",
+   "clauses": [
+    [
+     "energy_no_preamble",
+     "<",
+     0.0
+    ],
+    [
+     "scan_bad_frac",
+     "<",
+     -0.5
+    ],
+    [
+     "silent_loss_rate",
+     ">",
+     -0.5
+    ],
+    [
+     "tx_shadow_loss_delta",
+     ">",
+     0.5
+    ],
+    [
+     "rssi_pdr_corr",
+     ">",
+     -0.6
+    ]
+   ],
+   "then": {
+    "hypothesis": "fading"
+   },
+   "note": "Deep multipath/distance fades cause outages (high silent loss, high shadow-loss) with PDR still tracking RSSI reasonably; critically there is no raised noise floor, no non-preamble energy, and no hot ",
+   "support": 40,
+   "precision": 0.825
+  },
+  {
+   "id": "node_loss_silent_peer",
+   "clauses": [
+    [
+     "heartbeat_gap",
+     ">",
+     0.5
+    ],
+    [
+     "link_asymmetry",
+     ">",
+     0.5
+    ],
+    [
+     "scan_bad_frac",
+     "<",
+     0.0
+    ]
+   ],
+   "then": {
+    "hypothesis": "node_loss"
+   },
+   "note": "A dropped/dead node stops answering heartbeats entirely on one link (long heartbeat gap plus strong link asymmetry) while the spectrum itself is clean, ruling out an RF cause.",
+   "support": 10,
+   "precision": 1.0
+  }
+ ]
+}

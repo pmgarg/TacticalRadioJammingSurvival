@@ -1,0 +1,261 @@
+{
+ "proposed": [
+  {
+   "id": "barrage_wideband_jam",
+   "if": [
+    [
+     "energy_no_preamble",
+     ">",
+     0.3
+    ],
+    [
+     "scan_bad_frac",
+     ">",
+     0.0
+    ],
+    [
+     "scan_noise_spread",
+     "<",
+     0.2
+    ]
+   ],
+   "then": {
+    "hypothesis": "barrage"
+   },
+   "note": "Wideband emitter pushes busy-energy-without-preamble high and makes every scanned channel equally bad (low inter-channel spread) \u2014 direct emitter evidence, not a symptom-only call."
+  },
+  {
+   "id": "spot_narrowband_jam",
+   "if": [
+    [
+     "energy_no_preamble",
+     ">",
+     0.3
+    ],
+    [
+     "scan_bad_frac",
+     ">",
+     0.0
+    ],
+    [
+     "scan_noise_spread",
+     ">=",
+     0.2
+    ]
+   ],
+   "then": {
+    "hypothesis": "spot"
+   },
+   "note": "Selective emitter raises noise/energy on only some channels, so a scan shows a few very hot channels among clean ones (high inter-channel spread) unlike barrage's uniform hit."
+  },
+  {
+   "id": "sweep_periodic_scan",
+   "if": [
+    [
+     "scan_periodicity",
+     ">",
+     0.3
+    ],
+    [
+     "energy_no_preamble",
+     ">",
+     0.3
+    ],
+    [
+     "scan_bad_frac",
+     ">",
+     -0.5
+    ]
+   ],
+   "then": {
+    "hypothesis": "sweep"
+   },
+   "note": "A sweeping jammer periodically revisits channels, so scans show a periodic bad-channel pattern together with elevated non-preamble energy \u2014 no example in the label set, kept conservative on positive emitter evidence."
+  },
+  {
+   "id": "fading_no_emitter",
+   "if": [
+    [
+     "energy_no_preamble",
+     "<",
+     0.0
+    ],
+    [
+     "scan_bad_frac",
+     "<",
+     -0.5
+    ],
+    [
+     "silent_loss_rate",
+     ">",
+     -0.5
+    ],
+    [
+     "tx_shadow_loss_delta",
+     ">",
+     0.5
+    ],
+    [
+     "rssi_pdr_corr",
+     ">",
+     -0.6
+    ]
+   ],
+   "then": {
+    "hypothesis": "fading"
+   },
+   "note": "Deep multipath/distance fades cause outages (high silent loss, high shadow-loss) with PDR still tracking RSSI reasonably; critically there is no raised noise floor, no non-preamble energy, and no hot channels in scan, so it must not be called jamming."
+  },
+  {
+   "id": "node_loss_silent_peer",
+   "if": [
+    [
+     "heartbeat_gap",
+     ">",
+     0.5
+    ],
+    [
+     "link_asymmetry",
+     ">",
+     0.5
+    ],
+    [
+     "scan_bad_frac",
+     "<",
+     0.0
+    ]
+   ],
+   "then": {
+    "hypothesis": "node_loss"
+   },
+   "note": "A dropped/dead node stops answering heartbeats entirely on one link (long heartbeat gap plus strong link asymmetry) while the spectrum itself is clean, ruling out an RF cause."
+  },
+  {
+   "id": "hidden_term_shadowed_collision",
+   "if": [
+    [
+     "tx_shadow_loss_delta",
+     ">",
+     0.5
+    ],
+    [
+     "link_asymmetry",
+     ">",
+     0.5
+    ],
+    [
+     "noise_delta_base",
+     "<",
+     0.2
+    ],
+    [
+     "energy_no_preamble",
+     "<",
+     0.0
+    ]
+   ],
+   "then": {
+    "hypothesis": "hidden_term"
+   },
+   "note": "Loss concentrated on one asymmetric link with a shadow-loss signature (collisions the sender's own CCA never saw) and no noise-floor rise points to an unseen third node colliding at the receiver, not an emitter."
+  },
+  {
+   "id": "reactive_local_contention",
+   "if": [
+    [
+     "heartbeat_gap",
+     "<=",
+     -0.9
+    ],
+    [
+     "tx_defer_time",
+     ">",
+     0.0
+    ],
+    [
+     "rssi_pdr_corr",
+     ">",
+     -0.5
+    ]
+   ],
+   "then": {
+    "hypothesis": "reactive"
+   },
+   "note": "A reactive jammer keys up as soon as it senses the node's own transmission, so the node's local channel-access logic sees the channel busy and its defer time rises, yet mesh heartbeats keep flowing normally (no missed peers) and PDR stays correlated with own RSSI, unlike a hidden or dead node."
+  },
+  {
+   "id": "congestion_load_driven",
+   "if": [
+    [
+     "offered_load",
+     ">",
+     0.5
+    ],
+    [
+     "loss_load_corr",
+     ">",
+     0.3
+    ],
+    [
+     "energy_no_preamble",
+     "<",
+     0.0
+    ],
+    [
+     "noise_delta_base",
+     "<",
+     0.2
+    ]
+   ],
+   "then": {
+    "hypothesis": "congestion"
+   },
+   "note": "Congestion is self-inflicted: loss tracks the node's own offered load while there is no emitter evidence at all (flat noise floor, no non-preamble energy) \u2014 the canonical congestion signature even though loss_load_corr happened to be flat in the labelled snapshot."
+  }
+ ],
+ "accepted": [
+  "barrage_wideband_jam",
+  "spot_narrowband_jam",
+  "fading_no_emitter",
+  "node_loss_silent_peer"
+ ],
+ "dropped": [
+  {
+   "id": "sweep_periodic_scan",
+   "support": 0,
+   "precision": 0.0,
+   "bar": 0.9,
+   "then": {
+    "hypothesis": "sweep"
+   }
+  },
+  {
+   "id": "hidden_term_shadowed_collision",
+   "support": 31,
+   "precision": 0.194,
+   "bar": 0.75,
+   "then": {
+    "hypothesis": "hidden_term"
+   }
+  },
+  {
+   "id": "reactive_local_contention",
+   "support": 26,
+   "precision": 0.808,
+   "bar": 0.9,
+   "then": {
+    "hypothesis": "reactive"
+   }
+  },
+  {
+   "id": "congestion_load_driven",
+   "support": 0,
+   "precision": 0.0,
+   "bar": 0.75,
+   "then": {
+    "hypothesis": "congestion"
+   }
+  }
+ ],
+ "rejected": []
+}

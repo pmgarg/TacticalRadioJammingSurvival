@@ -85,6 +85,31 @@ Reply with ONLY a JSON object:
 """
 
 
+def rows_from_corpus(path, per_family, families):
+    """Labelled (cause, features) rows from an ns-3 trace file instead of a refsim rollout.
+
+    DESIGN 9.2 requires every headline number to come from ns-3, and that has to include
+    the evidence the rules are induced from: a rule fitted on refsim thresholds is a rule
+    fitted on the wrong world. These rows were produced by train/gen_ns3_corpus.py from the
+    authoritative simulator, so the thresholds the LLM proposes are measured against the
+    same physics the agent will meet."""
+    import collections
+    per = collections.defaultdict(list)
+    for line in open(path):
+        r = json.loads(line)
+        fam = r.get("family")
+        if fam in families and r.get("features"):
+            per[fam].append((r["cause"], r["features"]))
+    rows = []
+    rng = random.Random(0)
+    for fam in families:
+        pool = per.get(fam, [])
+        rng.shuffle(pool)
+        rows.extend(pool[:per_family * 4])
+    rng.shuffle(rows)
+    return rows
+
+
 def sample_states(families, per_family, seed0, per_episode=4):
     """Labelled (features, true_cause) rows, taken after onset, from valid scenarios."""
     rng = random.Random(seed0)
@@ -162,14 +187,27 @@ def main():
     ap.add_argument("--min-precision-jamming", type=float, default=0.90)
     ap.add_argument("--min-support", type=int, default=5)
     ap.add_argument("--rows", type=int, default=56)
+    ap.add_argument("--from-rows", default=None,
+                    help="induce from an ns-3 trace jsonl instead of simulating refsim "
+                         "(DESIGN 9.2: the rules must be fitted on the authoritative world)")
+    ap.add_argument("--holdout-rows", default=None,
+                    help="held-out ns-3 trace jsonl used to MEASURE every candidate rule")
     ap.add_argument("--out", default=os.path.join(HERE, "..", "data", "policy_v1.json"))
     a = ap.parse_args()
 
     cols = [c for c in a.cols.split(",") if c in FEATURE_NAMES]
     print("sampling training rows ...")
-    train = sample_states(FAMILIES, a.per_family, a.seed0)[:a.rows]
+    if a.from_rows:
+        train = rows_from_corpus(a.from_rows, a.per_family, FAMILIES)[:a.rows]
+        print(f"induction table: {len(train)} rows from {a.from_rows} (ns-3)")
+    else:
+        train = sample_states(FAMILIES, a.per_family, a.seed0)[:a.rows]
     print("sampling held-out rows ...")
-    hold = sample_states(FAMILIES, a.per_family, a.holdout_seed0)
+    if a.holdout_rows:
+        hold = rows_from_corpus(a.holdout_rows, a.per_family * 3, FAMILIES)
+        print(f"held-out measurement set: {len(hold)} rows from {a.holdout_rows} (ns-3)")
+    else:
+        hold = sample_states(FAMILIES, a.per_family, a.holdout_seed0)
     print(f"train rows={len(train)}  holdout rows={len(hold)}\n")
 
     prompt = (PROMPT_HEAD + "  " + ", ".join(ALLOWED) + "\n\n"

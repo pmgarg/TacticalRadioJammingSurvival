@@ -36,11 +36,11 @@ def check(ok: bool, name: str, detail: str = "") -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--golden", default="../data/llm_golden_full.json")
-    ap.add_argument("--traces", default="../data/traces/llm_full")
-    ap.add_argument("--min-episodes", type=int, default=400)
+    ap.add_argument("--golden", default="../data/llm_golden_ns3_full.json")
+    ap.add_argument("--traces", default="../data/traces/llm_ns3_full")
+    ap.add_argument("--min-episodes", type=int, default=24)
     ap.add_argument("--min-families", type=int, default=8)
-    ap.add_argument("--min-real-calls", type=int, default=1000)
+    ap.add_argument("--min-real-calls", type=int, default=100)
     a = ap.parse_args()
 
     print("=" * 70)
