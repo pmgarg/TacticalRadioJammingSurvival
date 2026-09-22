@@ -109,6 +109,9 @@ struct JammerSpec
     bool on{false};
     int curIdx{0};
     int psdCh{-1};  // AUDIT F3a: channel the PSD is currently pointed at (-1 = unset)
+    // ROBUSTNESS (capstone): re-entrancy guard for ReactiveTrigger. True from the
+    // moment a burst is scheduled until its Stop() fires -- see ReactiveTrigger.
+    bool burstActive{false};
 };
 
 static std::vector<JammerSpec> g_jam;
@@ -290,9 +293,24 @@ ReactiveTrigger(Ptr<const Packet>, double)
         {
             continue;
         }
+        // ROBUSTNESS (capstone): a re-entrancy guard. Without it, two agent
+        // transmissions closer together than delayUs + burstMs each schedule their
+        // own Start()/Stop() pair on the SAME WaveformGenerator, and the overlapping
+        // pair can call Start() while a previous burst is still running or Stop() out
+        // of order. That leaves SpectrumWifiPhy's preamble-reception state
+        // inconsistent and trips ns-3's own "!m_wifiPhy->m_currentEvent" assert in
+        // phy-entity.cc -- reproduced on reactive_on_tx: NS_ASSERT failed at
+        // +15.7s and +34.1s, both mid-episode, both this exact condition. A second
+        // TX arriving mid-burst is real (retries, multiple nodes) and must not start
+        // a second overlapping burst; skip it rather than corrupt the PHY's state.
+        if (j.burstActive)
+        {
+            continue;
+        }
         // AUDIT F3a(a): re-point the PSD on every trigger, so a mesh-wide
         // hop_channel does not make the follower jam an empty channel.
         PointAtVictim(j);
+        j.burstActive = true;
         size_t idx = i;
         Simulator::Schedule(MicroSeconds(j.delayUs), [idx]() {
             if (idx < g_jam.size() && g_jam[idx].on)
@@ -304,6 +322,7 @@ ReactiveTrigger(Ptr<const Packet>, double)
             if (idx < g_jam.size())
             {
                 g_jam[idx].wg->Stop();
+                g_jam[idx].burstActive = false;
             }
         });
     }

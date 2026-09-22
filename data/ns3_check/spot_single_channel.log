@@ -1,8 +1,8 @@
 [sim] spot_single_channel nodes=6 jammers=1 truth=spot tdmaSlots=4
-[sim] done rxOk=1261 rxErr=2992 analyzerClean=117370 analyzerDirty=2629
+[sim] done rxOk=1265 rxErr=2998 analyzerClean=117410 analyzerDirty=2589
 [diag] node N1 beaconsSent=594 dataSent=1180 dataRx=0 peersHeard=3
 [diag] node N2 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=2
 [diag] node N3 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=3
 [diag] node N4 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=3
-[diag] node N5 beaconsSent=594 dataSent=0 dataRx=273 peersHeard=4
+[diag] node N5 beaconsSent=594 dataSent=0 dataRx=276 peersHeard=4
 [diag] node N6 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=2

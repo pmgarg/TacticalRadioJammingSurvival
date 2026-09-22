@@ -1,8 +1,8 @@
 [sim] dead_peer nodes=6 jammers=0 truth=node_loss tdmaSlots=4
-[sim] done rxOk=3832 rxErr=2378 analyzerClean=117005 analyzerDirty=2994
+[sim] done rxOk=3837 rxErr=2384 analyzerClean=117016 analyzerDirty=2983
 [diag] node N1 beaconsSent=594 dataSent=1180 dataRx=0 peersHeard=3
 [diag] node N2 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=2
 [diag] node N3 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=3
 [diag] node N4 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=3
-[diag] node N5 beaconsSent=594 dataSent=0 dataRx=1113 peersHeard=4
+[diag] node N5 beaconsSent=594 dataSent=0 dataRx=1116 peersHeard=4
 [diag] node N6 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=2

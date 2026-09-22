@@ -4,7 +4,7 @@
     {
       "name": "trace-dashboard",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["capstone/dashboard/server.py", "--port", "8787"],
+      "runtimeArgs": ["capstone/dash/live.py", "--port", "8787", "--trace-dir", "data/traces/spot_batch_promptfix"],
       "port": 8787
     }
   ]
