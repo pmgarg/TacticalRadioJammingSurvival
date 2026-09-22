@@ -1,8 +1,8 @@
 [sim] sweeping_jammer nodes=6 jammers=1 truth=sweep tdmaSlots=4
-[sim] done rxOk=1935 rxErr=3193 analyzerClean=115626 analyzerDirty=4373
+[sim] done rxOk=1908 rxErr=3499 analyzerClean=116441 analyzerDirty=3558
 [diag] node N1 beaconsSent=594 dataSent=1180 dataRx=0 peersHeard=3
 [diag] node N2 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=2
 [diag] node N3 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=3
 [diag] node N4 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=3
-[diag] node N5 beaconsSent=594 dataSent=0 dataRx=380 peersHeard=4
+[diag] node N5 beaconsSent=594 dataSent=0 dataRx=357 peersHeard=4
 [diag] node N6 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=2

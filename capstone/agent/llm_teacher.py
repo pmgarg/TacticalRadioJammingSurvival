@@ -105,6 +105,9 @@ POLICY
   - fading   -> raise power / small move / reroute. NEVER hop_channel.
   - spot/sweep -> hop_channel to a scan-clean channel.
   - reactive -> change_tdma_slot, cut duty. Do NOT hop; it follows your transmissions.
+  - A tx_shadow_loss_delta/tx_defer_time spike right after YOUR OWN hop_channel or
+    change_tdma_slot is the resync gap, not a new jammer - it does not count as reactive
+    evidence until silent_listen clearly confirms it (loss visibly drops while silent).
   - barrage  -> fallback_to_lora, or declare_link_lost if nothing is reachable.
   - node_loss -> reroute around the dead peer.
   - congestion/hidden_term -> change_tdma_slot / back off.

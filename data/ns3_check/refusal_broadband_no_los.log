@@ -1,8 +1,8 @@
 [sim] refusal_broadband_no_los nodes=6 jammers=2 truth=barrage tdmaSlots=4
-[sim] done rxOk=1016 rxErr=2594 analyzerClean=119333 analyzerDirty=666
+[sim] done rxOk=1022 rxErr=2596 analyzerClean=119329 analyzerDirty=670
 [diag] node N1 beaconsSent=594 dataSent=1180 dataRx=0 peersHeard=3
 [diag] node N2 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=2
 [diag] node N3 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=3
 [diag] node N4 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=3
-[diag] node N5 beaconsSent=594 dataSent=0 dataRx=213 peersHeard=4
+[diag] node N5 beaconsSent=594 dataSent=0 dataRx=216 peersHeard=4
 [diag] node N6 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=2

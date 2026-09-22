@@ -80,6 +80,12 @@
   .by-fam-row .name { font-size: 11.5px; color: var(--dim); }
   .by-fam-row .pct { text-align: right; font-size: 11.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+  .grid-stack { display: block; }
+  .load-more {
+    grid-column: 1 / -1; text-align: center; padding: 8px; margin-top: 8px;
+    color: var(--accent); font-size: 12px; cursor: pointer; border-radius: 6px;
+  }
+  .load-more:hover { background: var(--panel2); }
   .rcard {
     background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--dim);
     border-radius: 8px; padding: 10px 12px; cursor: pointer; transition: transform .1s;
@@ -140,6 +146,9 @@
     <div id="batch-empty" class="empty">No finished runs yet -- start one with harness/run_llm.py, or watch it live below.</div>
     <div id="by-fam" class="by-fam"></div>
     <div class="section-label" id="grid-label" hidden>Episodes</div>
+    <input id="grid-filter" type="text" placeholder="filter episodes, e.g. spot_91 or reactive"
+           style="display:none; width:100%; margin-bottom:10px; padding:6px 10px; background:var(--panel2);
+                  border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:12.5px;">
     <div id="run-grid" class="grid"></div>
 
     <div class="section-label" id="live-label" hidden>In progress (no summary yet)</div>
@@ -341,35 +350,178 @@ function renderRunSummary(run) {
   }
 }
 
+let currentRunEpisodes = [];
+let gridExpanded = { fail: false, pass: false };
+const GRID_CAP = 10;
+
 function renderRunGrid(run) {
-  const grid = document.getElementById("run-grid");
-  grid.innerHTML = "";
-  document.getElementById("grid-label").hidden = false;
-  const episodes = [...run.episodes].sort((a, b) =>
+  currentRunEpisodes = [...run.episodes].sort((a, b) =>
     a.family === b.family ? a.seed - b.seed : a.family.localeCompare(b.family));
-  for (const ep of episodes) {
-    const name = `${ep.family}_${ep.seed}`;
-    const card = document.createElement("div");
-    card.className = "rcard " + (!ep.ok ? "" : ep.correct ? "ok" : "miss");
-    card.innerHTML = `
-      <div class="rc-top"><span class="rc-name">${name}</span><span class="rc-fam">${ep.family}</span></div>
-      <div class="rc-meta">
-        ${ep.ok ? (ep.correct ? "&check; " : "&cross; ") + "declared " + escapeHtml(String(ep.declared)) : "ERROR"}<br>
-        calls=${ep.calls ?? "-"} cost=${ep.cost ?? "-"} ${ep.wall_s ? Math.round(ep.wall_s) + "s" : ""}
-      </div>`;
-    card.addEventListener("click", () => goToEpisode(name));
-    grid.appendChild(card);
+  gridExpanded = { fail: false, pass: false };
+  const filterBox = document.getElementById("grid-filter");
+  filterBox.style.display = currentRunEpisodes.length > 6 ? "" : "none";
+  document.getElementById("grid-label").hidden = false;
+  drawRunGrid(filterBox.value.trim());
+}
+
+function makeCard(ep) {
+  const name = `${ep.family}_${ep.seed}`;
+  const card = document.createElement("div");
+  card.className = "rcard " + (!ep.ok ? "" : ep.correct ? "ok" : "miss");
+  card.innerHTML = `
+    <div class="rc-top"><span class="rc-name">${name}</span><span class="rc-fam">${ep.family}</span></div>
+    <div class="rc-meta">
+      ${ep.ok ? (ep.correct ? "&check; " : "&cross; ") + "declared " + escapeHtml(String(ep.declared)) : "ERROR"}<br>
+      calls=${ep.calls ?? "-"} cost=${ep.cost ?? "-"} ${ep.wall_s ? Math.round(ep.wall_s) + "s" : ""}
+    </div>`;
+  card.addEventListener("click", () => goToEpisode(name));
+  return card;
+}
+
+// One bucket (fail or pass) as its own mini-grid: a capped-count heading, up to
+// GRID_CAP cards, and an "expand" link revealing the rest in place -- combined
+// view can span hundreds of episodes (the real 518-episode corpus run included),
+// and showing all of them by default makes the page unusable and buries the
+// handful anyone is actually looking for.
+function drawBucket(container, label, episodes, key, accent) {
+  if (!episodes.length) return;
+  const heading = document.createElement("div");
+  heading.className = "section-label";
+  heading.style.cssText = `margin:14px 0 8px; color:${accent}`;
+  heading.textContent = `${label} (${episodes.length})`;
+  container.appendChild(heading);
+
+  const sub = document.createElement("div");
+  sub.className = "grid";
+  container.appendChild(sub);
+
+  const expanded = gridExpanded[key];
+  const shown = expanded ? episodes : episodes.slice(0, GRID_CAP);
+  for (const ep of shown) sub.appendChild(makeCard(ep));
+
+  const hidden = episodes.length - shown.length;
+  if (hidden > 0) {
+    const more = document.createElement("div");
+    more.className = "load-more";
+    more.textContent = `+ ${hidden} more -- expand`;
+    more.addEventListener("click", () => {
+      gridExpanded[key] = true;
+      drawRunGrid(document.getElementById("grid-filter").value.trim());
+    });
+    sub.appendChild(more);
+  } else if (expanded && episodes.length > GRID_CAP) {
+    const less = document.createElement("div");
+    less.className = "load-more";
+    less.style.color = "var(--dim)";
+    less.textContent = "show fewer";
+    less.addEventListener("click", () => {
+      gridExpanded[key] = false;
+      drawRunGrid(document.getElementById("grid-filter").value.trim());
+    });
+    sub.appendChild(less);
   }
+}
+
+function drawRunGrid(filterText) {
+  const grid = document.getElementById("run-grid");
+  // #run-grid is itself a CSS grid in the static markup (for the plain single-list
+  // case). Once this function starts appending section headings + nested per-bucket
+  // grids as ITS children, that outer grid-ness fights the nested ones: each heading
+  // and each nested grid becomes a single item squeezed into one ~190px outer column
+  // instead of stacking full-width, which is what produced the large blank gaps.
+  // Plain block stacking here; each nested .grid below lays out its own cards.
+  grid.className = "grid-stack";
+  grid.innerHTML = "";
+  const f = (filterText || "").toLowerCase();
+  const episodes = f
+    ? currentRunEpisodes.filter(ep => `${ep.family}_${ep.seed}`.toLowerCase().includes(f))
+    : currentRunEpisodes;
+  if (f && episodes.length === 0) {
+    grid.innerHTML = `<div class="empty">no episodes match "${escapeHtml(filterText)}"</div>`;
+    return;
+  }
+  if (f) {
+    // A deliberate search already narrows things -- show every match, no cap.
+    const sub = document.createElement("div");
+    sub.className = "grid";
+    grid.appendChild(sub);
+    for (const ep of episodes) sub.appendChild(makeCard(ep));
+    return;
+  }
+  const fails = episodes.filter(ep => !ep.ok || !ep.correct);
+  const passes = episodes.filter(ep => ep.ok && ep.correct);
+  drawBucket(grid, "Failed / missed", fails, "fail", "var(--bad)");
+  drawBucket(grid, "Passed", passes, "pass", "var(--ok)");
+}
+
+document.getElementById("grid-filter").addEventListener("input", (e) => drawRunGrid(e.target.value.trim()));
+
+const COMBINED = "__combined__";
+
+// Merge every completed run into one view. Runs accumulate as separate small
+// files (a batch, a retry, a smoke test...) and the same episode can appear
+// scored in more than one of them (e.g. re-run after a fix) -- when it does,
+// the newest scoring wins, since that is the one anyone would actually trust.
+// `runsMeta` is already sorted newest-first (server side), so keeping only the
+// first occurrence of each family_seed key as we walk it does exactly that.
+async function buildCombinedRun(runsMeta) {
+  const byKey = new Map();
+  for (const meta of runsMeta) {
+    let run;
+    try {
+      const r = await fetch("/api/run/" + encodeURIComponent(meta.run));
+      run = await r.json();
+    } catch { continue; }
+    for (const ep of (run.episodes || [])) {
+      const key = `${ep.family}_${ep.seed}`;
+      if (!byKey.has(key)) byKey.set(key, ep);
+    }
+  }
+  const episodes = [...byKey.values()];
+  const ok = episodes.filter(e => e.ok);
+  const withOracle = ok.filter(e => "oracle_correct" in e);
+  const byFam = {};
+  for (const e of ok) {
+    const d = byFam[e.family] || (byFam[e.family] = { n: 0, correct: 0 });
+    d.n++;
+    if (e.correct) d.correct++;
+  }
+  const by_family = {};
+  for (const [fam, d] of Object.entries(byFam)) by_family[fam] = { n: d.n, acc: d.correct / d.n };
+  const sum = (key) => ok.reduce((a, e) => a + (e[key] || 0), 0);
+  const summary = {
+    episodes: episodes.length,
+    accuracy: ok.length ? ok.filter(e => e.correct).length / ok.length : null,
+    oracle_agreement: withOracle.length
+      ? withOracle.filter(e => e.correct === e.oracle_correct).length / withOracle.length : null,
+    llm_calls: sum("calls"),
+    calls_skipped_by_gate: sum("skipped_stable") + sum("skipped_quiet"),
+    parse_failures: sum("parse_failures"),
+    repairs: sum("repairs"),
+    provider_errors: sum("errors"),
+    wall_s: sum("wall_s"),
+    by_family,
+  };
+  return { summary, episodes };
 }
 
 async function loadRun(name) {
   currentRun = name;
   let run;
-  try {
-    const r = await fetch("/api/run/" + encodeURIComponent(name));
-    run = await r.json();
-  } catch { return; }
-  if (run.error) return;
+  if (name === COMBINED) {
+    let runsMeta = [];
+    try {
+      const r = await fetch("/api/runs");
+      runsMeta = await r.json();
+    } catch { return; }
+    run = await buildCombinedRun(runsMeta);
+  } else {
+    try {
+      const r = await fetch("/api/run/" + encodeURIComponent(name));
+      run = await r.json();
+    } catch { return; }
+    if (run.error) return;
+  }
   document.getElementById("batch-empty").hidden = true;
   renderRunSummary(run);
   renderRunGrid(run);
@@ -392,17 +544,25 @@ async function refreshRuns(selectMostRecent) {
     document.getElementById("by-fam").innerHTML = "";
     return;
   }
+  if (list.length > 1) {
+    const allOpt = document.createElement("option");
+    const totalEp = new Set(); // rough count for the label only; exact dedup happens on load
+    for (const r of list) totalEp.add(r.run);
+    allOpt.value = COMBINED;
+    allOpt.textContent = `All runs combined (${list.length} runs)`;
+    sel.appendChild(allOpt);
+  }
   for (const r of list) {
     const opt = document.createElement("option");
     opt.value = r.run;
     opt.textContent = `${r.run} (${r.episodes} episodes)`;
     sel.appendChild(opt);
   }
-  if (list.some(r => r.run === prev)) {
+  if (list.some(r => r.run === prev) || prev === COMBINED) {
     sel.value = prev;
   } else if (selectMostRecent) {
-    sel.value = list[0].run;
-    loadRun(list[0].run);
+    sel.value = COMBINED;
+    loadRun(COMBINED);
   }
 }
 document.getElementById("run").addEventListener("change", (e) => {
@@ -415,16 +575,23 @@ async function refreshLiveGrid() {
     const r = await fetch("/api/episodes");
     list = await r.json();
   } catch { return; }
-  // Episodes already shown (scored) in the currently loaded run don't need a
-  // second, unscored tile -- only show activity for ones not in that set.
+  // Episodes already scored in ANY completed run don't need a second, unscored
+  // tile -- only show activity for ones no run has claimed yet. Checking only
+  // currentRun was wrong: an episode scored in an OLDER run (not the one
+  // currently selected in the dropdown) showed here as "in progress" forever,
+  // because it was never in the one run this used to check against.
   const known = new Set();
-  if (currentRun) {
-    try {
-      const r = await fetch("/api/run/" + encodeURIComponent(currentRun));
-      const run = await r.json();
-      for (const ep of (run.episodes || [])) known.add(`${ep.family}_${ep.seed}`);
-    } catch { /* ignore */ }
-  }
+  try {
+    const rr = await fetch("/api/runs");
+    const runs = await rr.json();
+    for (const meta of runs) {
+      try {
+        const r = await fetch("/api/run/" + encodeURIComponent(meta.run));
+        const run = await r.json();
+        for (const ep of (run.episodes || [])) known.add(`${ep.family}_${ep.seed}`);
+      } catch { /* skip this run, keep going */ }
+    }
+  } catch { /* ignore */ }
   const liveGrid = document.getElementById("live-grid");
   const liveLabel = document.getElementById("live-label");
   const fresh = list.filter(e => !known.has(e.episode));
