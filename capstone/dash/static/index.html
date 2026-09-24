@@ -94,10 +94,16 @@
   .rcard.ok { border-left-color: var(--ok); }
   .rcard.miss { border-left-color: var(--bad); }
   .rcard.live { border-left-color: var(--warn); }
+  .rcard.live.stale { border-left-color: var(--dim); opacity: 0.7; }
   .rcard .rc-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
   .rcard .rc-name { font-weight: 700; font-size: 12.5px; }
   .rcard .rc-fam { color: var(--dim); font-size: 10.5px; text-transform: uppercase; }
   .rcard .rc-meta { color: var(--dim); font-size: 11px; }
+  .rc-tag { font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em;
+            padding: 1px 6px; border-radius: 8px; }
+  .rc-tag.rc-live { color: var(--warn); background: rgba(230, 180, 60, .12); }
+  .rc-tag.rc-stale { color: var(--dim); background: rgba(255, 255, 255, .06); }
+  .rc-bad { color: var(--bad); }
   .section-label { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; margin: 18px 0 8px; }
 </style>
 </head>
@@ -575,12 +581,14 @@ async function refreshLiveGrid() {
     const r = await fetch("/api/episodes");
     list = await r.json();
   } catch { return; }
-  // Episodes already scored in ANY completed run don't need a second, unscored
-  // tile -- only show activity for ones no run has claimed yet. Checking only
-  // currentRun was wrong: an episode scored in an OLDER run (not the one
-  // currently selected in the dropdown) showed here as "in progress" forever,
-  // because it was never in the one run this used to check against.
-  const known = new Set();
+  // An episode "belongs" to a completed run's summary only if that summary is
+  // AS NEW OR NEWER than the trace file itself. Plain membership was wrong: a
+  // re-run reusing the same family+seed (to credit cache hits from an aborted
+  // attempt) touches the trace file again, but the OLD summary still lists that
+  // family+seed -- so it looked permanently "already scored" even while it was
+  // actively running again. Comparing mtimes instead means "claimed" only holds
+  // until the trace moves past the claim.
+  const claimedAt = new Map();   // family_seed -> mtime of the run that scored it
   try {
     const rr = await fetch("/api/runs");
     const runs = await rr.json();
@@ -588,23 +596,38 @@ async function refreshLiveGrid() {
       try {
         const r = await fetch("/api/run/" + encodeURIComponent(meta.run));
         const run = await r.json();
-        for (const ep of (run.episodes || [])) known.add(`${ep.family}_${ep.seed}`);
+        for (const ep of (run.episodes || [])) {
+          const key = `${ep.family}_${ep.seed}`;
+          const prev = claimedAt.get(key);
+          if (prev === undefined || meta.mtime > prev) claimedAt.set(key, meta.mtime);
+        }
       } catch { /* skip this run, keep going */ }
     }
   } catch { /* ignore */ }
   const liveGrid = document.getElementById("live-grid");
   const liveLabel = document.getElementById("live-label");
-  const fresh = list.filter(e => !known.has(e.episode));
+  const fresh = list.filter(e => {
+    const claim = claimedAt.get(e.episode);
+    return claim === undefined || e.mtime > claim;
+  });
   liveGrid.innerHTML = "";
   liveLabel.hidden = fresh.length === 0;
+  if (fresh.length) liveLabel.textContent = `In progress (${fresh.length} episode${fresh.length === 1 ? "" : "s"})`;
   const now = Date.now() / 1000;
   for (const ep of fresh) {
     const ageS = now - ep.mtime;
+    const stale = ageS > 120;  // no write in 2 min -- probably stalled or finished quietly
     const card = document.createElement("div");
-    card.className = "rcard live";
+    card.className = "rcard live" + (stale ? " stale" : "");
+    const status = ep.last_error
+      ? `<span class="rc-bad">error: ${ep.last_error.slice(0, 60)}</span>`
+      : ep.leading_cause
+        ? `leaning <b>${ep.leading_cause}</b>${ep.confidence != null ? ` (${Math.round(ep.confidence * 100)}%)` : ""} -- last call <b>${ep.last_call || "?"}</b>`
+        : "starting...";
     card.innerHTML = `
-      <div class="rc-top"><span class="rc-name">${ep.episode}</span></div>
-      <div class="rc-meta">${ep.records} decision${ep.records === 1 ? "" : "s"} so far
+      <div class="rc-top"><span class="rc-name">${ep.episode}</span>
+        ${stale ? '<span class="rc-tag rc-stale">stalled?</span>' : '<span class="rc-tag rc-live">live</span>'}</div>
+      <div class="rc-meta">${ep.records} decision${ep.records === 1 ? "" : "s"} so far -- ${status}
         <br>updated ${ageS < 60 ? Math.round(ageS) + "s" : Math.round(ageS / 60) + "m"} ago</div>`;
     card.addEventListener("click", () => goToEpisode(ep.episode));
     liveGrid.appendChild(card);

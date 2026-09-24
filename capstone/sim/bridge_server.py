@@ -67,7 +67,18 @@ def state_to_obs(st: dict, ex_prev_scan_t, t) -> tuple[RawObs, ScanResult | None
     if floor < -199:
         floor = -96.0
     jam = floor > -80.0
-    decod = 10.0 * (sum(float(x) for x in pdrs) / len(pdrs)) if pdrs else 0.0
+    # ROBUSTNESS (capstone): decod used to be 10*mean(pdr_per_link) -- the MESH's own
+    # delivery ratio, which degrades under jamming AND congestion alike and so cannot
+    # separate them (that was the whole point of this feature). ns-3 now reports the
+    # raw decoded-802.11-frame rate from its PHY sniffer (mesh peer or not) as
+    # decod_fps. /60 (calibrated against a smoke-test scenario) crushed real corpus
+    # congestion traffic (measured late-episode: ~30-225 raw fps) back near the -1
+    # floor; /8 keeps jamming pinned at -1 while giving congestion's low end real
+    # separation (crosses into positive territory). hidden_term's real corpus traffic
+    # (~4.5-7.5 raw fps) is ~10-40x below congestion's and stays low under ANY
+    # reasonable linear divisor -- that confusion still needs the tx_defer_time rule,
+    # not this feature alone.
+    decod = float(st.get("decod_fps", 0.0)) / 8.0
     busy = min(1.0, 0.05 + (0.9 if jam else 0.0) + 0.3 * min(1.0, decod / 20.0))
     scan = None
     if band and (ex_prev_scan_t is None or t - ex_prev_scan_t >= 2.0):

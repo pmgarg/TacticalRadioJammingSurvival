@@ -1657,7 +1657,14 @@ main(int argc, char* argv[])
            << ",\"rssi\":[" << rs.str() << "],\"hb\":[" << hb.str() << "],\"band\":["
            << bp.str() << "],\"n_links\":" << nl << ",\"hops_used\":" << g_hops
            << ",\"tx_power\":" << curTxp << ",\"retry\":" << std::setprecision(3) << retry
-           << ",\"load\":" << load << ",\"tx_duty\":" << (g_agentTx ? 1.0 : 0.35) << "}";
+           << ",\"load\":" << load << ",\"tx_duty\":" << (g_agentTx ? 1.0 : 0.35)
+           // ROBUSTNESS (capstone): raw MAC-layer decoded-frame rate in this window
+           // (dOk already computed above for `retry`). SnifferRx fires on ANY
+           // successfully-decoded 802.11 frame the agent's PHY hears, mesh peer or
+           // not, unlike pdr_per_link which is mesh-link-only by construction -- this
+           // is the signal foreign_fps was supposed to carry and previously did not.
+           // The Python adapter rescales it to match refsim's decodable_fps range.
+           << ",\"decod_fps\":" << std::setprecision(1) << (win > 0 ? dOk / win : 0.0) << "}";
 
         if (!BridgeSend(js.str()))
         {
