@@ -1,8 +1,8 @@
 [sim] congestion_burst nodes=6 jammers=0 truth=congestion tdmaSlots=4
-[sim] done rxOk=65874 rxErr=76401 analyzerClean=116830 analyzerDirty=3169
+[sim] done rxOk=67154 rxErr=85581 analyzerClean=116723 analyzerDirty=3276
 [diag] node N1 beaconsSent=594 dataSent=1180 dataRx=0 peersHeard=3
 [diag] node N2 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=2
 [diag] node N3 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=3
 [diag] node N4 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=3
-[diag] node N5 beaconsSent=594 dataSent=0 dataRx=1029 peersHeard=4
+[diag] node N5 beaconsSent=594 dataSent=0 dataRx=1114 peersHeard=4
 [diag] node N6 beaconsSent=595 dataSent=0 dataRx=0 peersHeard=2

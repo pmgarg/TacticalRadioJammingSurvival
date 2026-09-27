@@ -21,6 +21,8 @@ def load_ns3_percept(path: str, n_channels: int = 8) -> list[RawObs]:
     """Read <out>.percept.csv into the same RawObs the refsim emits."""
     out: list[RawObs] = []
     prev_scan_t = None
+    prev_rx_ok = None
+    prev_t = None
     with open(path) as fh:
         for row in csv.DictReader(fh):
             t = float(row["t"])
@@ -49,11 +51,25 @@ def load_ns3_percept(path: str, n_channels: int = 8) -> list[RawObs]:
             floor = float(row.get("meas_floor_dbm", -96.0) or -96.0)
             if floor < -199:
                 floor = -96.0
-            # busy fraction / decodable rate are not directly exposed by ns-3 either;
-            # derive them the SAME coarse way the ESP32 will (design §11.2) so the
-            # model never trains on information the hardware cannot provide.
+            # busy fraction is not directly exposed by ns-3; derive it the SAME coarse
+            # way the ESP32 will (design §11.2) so the model never trains on
+            # information the hardware cannot provide. decodable rate IS available,
+            # from rx_ok below.
             jam = floor > -80.0
-            decod = 10.0 * (sum(pdrs) / len(pdrs)) if pdrs else 0.0
+            # ROBUSTNESS (capstone): see the matching comment in bridge_server.py --
+            # decod used to be 10*mean(pdr_per_link), the mesh's own delivery ratio,
+            # which degrades under jamming AND congestion alike. rx_ok is a cumulative
+            # count of every 802.11 frame the sniffer decoded (mesh peer or not); the
+            # windowed delta is the real foreign-traffic-capable signal. /8 (not /60,
+            # which was calibrated against an unrepresentative smoke-test scenario)
+            # keeps jamming at the -1 floor while giving real corpus congestion traffic
+            # (~30-225 raw fps late-episode) genuine separation.
+            rx_ok = float(row.get("rx_ok", 0.0) or 0.0)
+            if prev_rx_ok is not None and t > prev_t:
+                decod = max(0.0, (rx_ok - prev_rx_ok) / (t - prev_t)) / 8.0
+            else:
+                decod = 0.0
+            prev_rx_ok, prev_t = rx_ok, t
             busy = min(1.0, 0.05 + (0.9 if jam else 0.0) + 0.3 * min(1.0, decod / 20.0))
             scan = None
             if band and (prev_scan_t is None or t - prev_scan_t >= 2.0):

@@ -62,7 +62,8 @@ class ClaudeCliProvider:
     name = "claude-cli"
 
     def __init__(self, cache: bool = True, timeout_s: int = 180,
-                 model: str | None = None, system: str | None = None):
+                 model: str | None = None, system: str | None = None,
+                 effort: str | None = None):
         self.cache = cache
         self.timeout_s = timeout_s
         self.model = model or CLAUDE_MODEL
@@ -71,6 +72,15 @@ class ClaudeCliProvider:
         # builds one combined prompt and leaves this unset -- that keeps working
         # unchanged; new callers may pass it for a cleaner separation.
         self.system = system
+        # TOKEN BUDGET (capstone): the CLI's --effort was never passed, so every call ran
+        # at whatever the CLI's own default is. Measured on a real batch: the reply itself
+        # is ~130-150 tokens (checked directly against raw_response), but usage.output_tokens
+        # averaged 2,634/call -- ~2,500 tokens/call of invisible extended thinking that never
+        # appears in the trace. This is a fixed-schema, bounded decision task (one panel in,
+        # one of 12 actions out), not open-ended reasoning; --effort lets that cost be capped
+        # without touching the reply itself. Unset by default (LLM_EFFORT env var opts in)
+        # so existing cached runs and behaviour are untouched until this is validated.
+        self.effort = effort or os.environ.get("LLM_EFFORT") or None
         self.calls = 0
         self.cache_hits = 0
         self.errors = 0
@@ -86,7 +96,7 @@ class ClaudeCliProvider:
     def _key(self, prompt: str) -> str:
         h = hashlib.sha256(
             self.model.encode() + b"\x00" + (self.system or "").encode() + b"\x00"
-            + prompt.encode()).hexdigest()[:32]
+            + (self.effort or "").encode() + b"\x00" + prompt.encode()).hexdigest()[:32]
         return os.path.join(CACHE_DIR, h + ".json")
 
     def complete(self, prompt: str, system: str | None = None) -> str:
@@ -134,6 +144,8 @@ class ClaudeCliProvider:
 
         cmd = [CLAUDE_BIN, "-p", "--output-format", "json", "--tools", "",
                "--model", self.model]
+        if self.effort:
+            cmd += ["--effort", self.effort]
         if self.system:
             # --system-prompt REPLACES the Claude Code CLI's own system prompt and
             # tool catalogue. Appending would keep ~25K tokens of agent scaffold we

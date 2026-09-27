@@ -44,12 +44,36 @@ def _episodes() -> list[dict]:
         path = os.path.join(TRACE_DIR, name)
         try:
             st = os.stat(path)
+            last = None
+            records = 0
             with open(path, encoding="utf-8") as fh:
-                records = sum(1 for line in fh if line.strip())
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    records += 1
+                    last = line
         except OSError:
             continue
+        # STATUS (capstone): cheap last-line peek so the in-progress grid can show
+        # what the episode is doing right now, not just "N decisions so far" -- the
+        # same leading-cause/confidence readout the batch summary shows once done.
+        last_call = last_conf = leading_cause = last_error = None
+        if last:
+            try:
+                rec = json.loads(last)
+                last_call = rec.get("call")
+                last_conf = rec.get("confidence")
+                belief = rec.get("belief") or {}
+                if belief:
+                    leading_cause = max(belief, key=belief.get)
+                last_error = rec.get("error")
+            except json.JSONDecodeError:
+                pass
         out.append({"episode": name[:-6], "size": st.st_size, "mtime": st.st_mtime,
-                    "records": records})
+                    "records": records, "last_call": last_call,
+                    "confidence": last_conf, "leading_cause": leading_cause,
+                    "last_error": last_error})
     out.sort(key=lambda r: -r["mtime"])
     return out
 

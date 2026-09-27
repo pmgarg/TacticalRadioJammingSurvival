@@ -20,11 +20,17 @@ die() { printf "\033[31mFAIL: %s\033[0m\n" "$*" >&2; exit 1; }
 say "0. OLSR robustness patch"
 # The patch stops ns-3.45's OLSR dying with SIGILL under strong jamming (NS3_BUG.md).
 # 23 of 30 scenarios crashed without it, and a crashed run still leaves a partial CSV.
-if grep -q "AUDIT\|robustness\|messageSize > sizeLeft" "$NS3_DIR/src/olsr/model/olsr-header.cc" 2>/dev/null; then
+if grep -qi "AUDIT\|robustness\|messageSize > sizeLeft" "$NS3_DIR/src/olsr/model/olsr-header.cc" 2>/dev/null; then
   echo "   looks applied"
 else
   echo "   NOT detected. Applying sim_ns3/ns3-olsr-robustness.patch ..."
-  ( cd "$NS3_DIR" && patch -p1 --forward < "$REPO/sim_ns3/ns3-olsr-robustness.patch" ) \
+  # -p0, not -p1: the patch's +++ lines are already relative to $NS3_DIR
+  # (e.g. "src/olsr/model/olsr-header.cc", no a/ or b/ prefix) -- -p1 strips
+  # "src/" and looks for a path that does not exist. Found the hard way: the
+  # detection grep above was also case-sensitive and missed the applied
+  # patch's own "ROBUSTNESS PATCH" marker (capitalised), so this branch
+  # looked untested for a while when the fix was in fact already live.
+  ( cd "$NS3_DIR" && patch -p0 --forward < "$REPO/sim_ns3/ns3-olsr-robustness.patch" ) \
     || echo "   (patch reported an issue -- check manually; a partial CSV proves nothing)"
 fi
 
