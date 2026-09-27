@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -99,10 +100,31 @@ def state_to_obs(st: dict, ex_prev_scan_t, t) -> tuple[RawObs, ScanResult | None
     return obs, scan
 
 
+def _f(v, default: float = 0.0) -> float:
+    """Coerce a JSON field to float for the UI feed. A viewer must never raise."""
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return default
+
+
 def run(scenario_path, ns3_bin: str, agent_name: str = "baseline",
         out_prefix: str | None = None, verbose: bool = True,
-        bundle: str | None = None, agent_obj=None) -> dict:
+        bundle: str | None = None, agent_obj=None, on_tick=None,
+        on_state=None, on_log=None) -> dict:
     """`scenario_path` may be a path or an already-loaded Scenario.
+
+    `on_state(event: dict)` is called on EVERY state message from ns-3 (10 Hz), before
+    and between decisions. It exists because `on_tick` alone makes the simulator look
+    dead: no decision happens during the 5 s warm-up, and with the LLM teacher the first
+    decision then waits on a ~40 s model call. A viewer watching a blank screen for a
+    minute cannot tell a running simulation from a hung one. This is the pulse.
+
+    `on_tick(event: dict)` is an optional observer called once per decision tick with the
+    live state -- time, delivery, per-channel band, the belief and the call just chosen.
+    It exists so a UI can animate a run AS IT HAPPENS instead of replaying a trace
+    afterwards. It is passive: it cannot change the decision, and any exception it raises
+    is swallowed, because a viewer must never be able to alter or break a scored run.
 
     `agent_obj` lets a CALLER supply the agent instead of naming one from the registry --
     which is what makes it possible to drive the ns-3 bridge with the LLM teacher (whose
@@ -116,6 +138,16 @@ def run(scenario_path, ns3_bin: str, agent_name: str = "baseline",
     sock_path = os.path.join(tmpd, "agent.sock")
     out_prefix = out_prefix or os.path.join(tmpd, "run")
 
+    # FAIL FAST, LOUDLY. A missing or unbuildable ns-3 binary used to show up as the
+    # bridge blocking forever on accept() with no message at all -- the caller saw
+    # "starting..." and nothing else, indefinitely. Check before launching anything.
+    if not ns3_bin:
+        raise RuntimeError("no ns-3 binary given (set $NS3_BIN or pass --ns3)")
+    if not os.path.exists(ns3_bin):
+        raise RuntimeError(f"ns-3 binary not found: {ns3_bin}")
+    if not os.access(ns3_bin, os.X_OK):
+        raise RuntimeError(f"ns-3 binary is not executable: {ns3_bin}")
+
     srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     srv.bind(sock_path)
     srv.listen(1)
@@ -128,8 +160,58 @@ def run(scenario_path, ns3_bin: str, agent_name: str = "baseline",
          "--tdmaSlots=4"],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-    srv.settimeout(60)
-    conn, _ = srv.accept()
+    # Poll in short slices instead of one long blocking accept, so a simulator that
+    # exits immediately (the usual symptom of a broken build) is reported in about a
+    # second rather than after the full timeout.
+    # DRAIN ns-3's STDOUT. It is a pipe, and until now nobody read it: a chatty run
+    # could fill the OS buffer and block the simulator forever with no error anywhere.
+    # Draining it on a thread fixes that AND gives the UI the simulator's own log.
+    ns3_log: list[str] = []
+
+    def _drain():
+        try:
+            for ln in iter(proc.stdout.readline, ""):
+                ln = ln.rstrip("\n")
+                if not ln:
+                    continue
+                ns3_log.append(ln)
+                if len(ns3_log) > 500:
+                    ns3_log.pop(0)
+                if on_log is not None:
+                    try:
+                        on_log(ln)
+                    except Exception:                                # noqa: BLE001
+                        pass
+        except Exception:                                            # noqa: BLE001
+            pass
+
+    threading.Thread(target=_drain, daemon=True).start()
+
+    srv.settimeout(0.5)
+    conn = None
+    deadline = time.time() + 60
+    while time.time() < deadline:
+        try:
+            conn, _ = srv.accept()
+            break
+        except socket.timeout:
+            if proc.poll() is not None:
+                break          # ns-3 is gone; stop waiting for a connection
+    if conn is None:
+        # ns-3 was started but never connected back. Almost always it died on launch --
+        # a broken or half-linked build, a missing dylib, a bad config. Its own output
+        # says which, so surface that instead of a bare timeout.
+        proc.kill()
+        time.sleep(0.3)                     # let the drain thread catch the last lines
+        out = "\n".join(ns3_log[-25:])[:1200]
+        rc = proc.poll()
+        raise RuntimeError(
+            f"ns-3 exited without connecting to the bridge (exit code {rc}). "
+            f"The binary started but never reached the bridge -- usually a broken build. "
+            f"ns-3 said:\n{out.strip() or '(no output)'}") from None
+    # Once connected, ns-3 streams state at 10 Hz and only pauses while WE decide, so a
+    # long silence means it died mid-run. Without this, readline() blocked forever.
+    conn.settimeout(float(os.environ.get("BRIDGE_READ_TIMEOUT_S", "120")))
     f = conn.makefile("rwb")
 
     agent = agent_obj if agent_obj is not None else (
@@ -142,6 +224,17 @@ def run(scenario_path, ns3_bin: str, agent_name: str = "baseline",
     last_scan_obj = None
     used = {"hops": 0, "scans": 0, "silent": 0, "moves": 0, "costly": 0}
     tried: dict[tuple, float] = {}
+    # EPISODE MEMORY. Without this the agent re-reasons from the current panel on every
+    # tick with no idea what it already did: it cannot notice that a remedy failed, and
+    # it cannot stop repeating a diagnosis the evidence has already contradicted. The
+    # renderers in harness/loop.py and agent/llm_teacher.py have always been able to show
+    # `tests_run` and `actions_taken` -- the live bridge simply never filled them in, so
+    # every prompt claimed the agent had done nothing.
+    tests_run: list[str] = []
+    actions_taken: list[str] = []
+    hypothesis_history: list[str] = []
+    recovery_attempts: list[dict] = []
+    pending_effect: dict | None = None      # a remedy whose outcome we have not seen yet
     B = CONTRACT["budgets"]
     TH = CONTRACT["thresholds"]
     no_link_for = 0.0
@@ -157,7 +250,14 @@ def run(scenario_path, ns3_bin: str, agent_name: str = "baseline",
     WARMUP_S = 5.0     # OLSR convergence + beacon ramp; no diagnosis before this
 
     while True:
-        line = f.readline()
+        try:
+            line = f.readline()
+        except socket.timeout:
+            proc.kill()
+            raise RuntimeError(
+                "ns-3 stopped sending state (no message for "
+                f"{os.environ.get('BRIDGE_READ_TIMEOUT_S', '120')}s). The simulator "
+                "died mid-episode; check its output above.") from None
         if not line:
             break
         try:
@@ -178,6 +278,20 @@ def run(scenario_path, ns3_bin: str, agent_name: str = "baseline",
             last_scan_obj = scan
             pending_scan = False
         feats = ex.update(obs)
+
+        if on_state is not None:
+            try:
+                on_state({
+                    "t": round(t, 2),
+                    "pdr": _f(feats[0]),
+                    "channel": int(st.get("channel", 0)),
+                    "link_pdr": [_f(x) for x in (st.get("pdr") or [])],
+                    "link_hb": [_f(x) for x in (st.get("hb") or [])],
+                    "warmup": bool(t < WARMUP_S),
+                    "onset_t": ex.onset_t,
+                })
+            except Exception:                                        # noqa: BLE001
+                pass          # a viewer must never break a scored run
 
         # The always-available set is taken from the CONTRACT, not retyped here. This
         # list had drifted: it still offered listen_test and transmit_probe after contract
@@ -265,10 +379,26 @@ def run(scenario_path, ns3_bin: str, agent_name: str = "baseline",
                 pass
             continue
 
+        # Score the outcome of the previous remedy BEFORE asking again, so the agent is
+        # told whether what it did actually helped. This is the whole self-correction
+        # loop: "I tried X believing Y, delivery did not improve" is the only signal that
+        # can make the next answer different from the last one.
+        if pending_effect is not None and t >= pending_effect["t"] + 2.0:
+            after = _f(feats[0])
+            gain = after - pending_effect["pdr_before"]
+            pending_effect["outcome"] = ("helped" if gain >= 0.15 else
+                                         "no change" if gain > -0.15 else "made it worse")
+            pending_effect["delta_pct"] = round(gain * 50.0, 1)
+            recovery_attempts.append(pending_effect)
+            pending_effect = None
+
         ctx = Context(t=t, channel=int(st.get("channel", 6)), n_channels=sc.n_channels,
                       peers=[f"P{i}" for i in range(int(st.get("n_links", 0)))],
                       budget={"hops_used": used["hops"]}, available=avail,
-                      last_scan=last_scan_obj, lora_available=sc.lora_available)
+                      last_scan=last_scan_obj, lora_available=sc.lora_available,
+                      tests_run=list(tests_run), actions_taken=list(actions_taken),
+                      hypothesis_history=list(hypothesis_history),
+                      recovery_attempts=list(recovery_attempts))
         d = agent.decide(feats, ctx)
         if d.call not in avail:
             d.call, d.args = "no_op", {}
@@ -294,8 +424,56 @@ def run(scenario_path, ns3_bin: str, agent_name: str = "baseline",
             used["moves"] += 1
             used["costly"] += 2
 
+        if d.top and (not hypothesis_history or hypothesis_history[-1] != d.top):
+            hypothesis_history.append(d.top)
+        if d.call in DIAGNOSE:
+            if d.call not in tests_run:
+                tests_run.append(d.call)
+        elif d.call not in ("no_op", "declare_link_lost"):
+            actions_taken.append(f"{d.call}@{t:.0f}s")
+            pending_effect = {"t": t, "call": d.call, "believed": d.top,
+                              "pdr_before": _f(feats[0])}
+
         records.append({"t": round(t, 2), "features": list(feats),
                         "call": d.call, "available": list(avail)})
+
+        if on_tick is not None:
+            try:
+                on_tick({
+                    "t": round(t, 2),
+                    # feats[0] is pdr_fast as the AGENT sees it (-1..+1), not a raw
+                    # field name that may drift; the UI is showing the agent's view.
+                    "pdr": _f(feats[0]),
+                    "rssi": _f(feats[8]),
+                    "channel": int(st.get("channel", 0)),
+                    "n_channels": int(sc.n_channels),
+                    # The spectrum shown is the SCAN THE AGENT PAID FOR, not the
+                    # simulator's God-view. Before the first scan there is nothing to
+                    # draw -- which is the point: information has to be bought, and a
+                    # viewer should see the band appear at the moment it is.
+                    "band": ([ _f(c.noise_dbm) for c in
+                               sorted(last_scan_obj.channels, key=lambda c: c.ch) ]
+                             if (last_scan_obj and getattr(last_scan_obj, "channels", None))
+                             else []),
+                    "scan_t": (round(float(last_scan_obj.t), 1)
+                               if last_scan_obj is not None else None),
+                    "n_links": int(st.get("n_links", 0)),
+                    # PER-LINK telemetry, so a topology view can colour each edge
+                    # independently instead of showing one aggregate number. This is
+                    # what makes hidden_terminal and node_loss visible on screen: one
+                    # edge dies while the rest stay healthy.
+                    "link_pdr": [_f(x) for x in (st.get("pdr") or [])],
+                    "link_rssi": [_f(x) for x in (st.get("rssi") or [])],
+                    "link_hb": [_f(x) for x in (st.get("hb") or [])],
+                    "belief": dict(d.belief or {}),
+                    "top": d.top, "p": round(d.top_p, 3),
+                    "call": d.call, "args": dict(d.args or {}),
+                    "why": str(getattr(d, "why", ""))[:240],
+                    "scans_used": used["scans"], "hops_used": used["hops"],
+                    "onset_t": ex.onset_t,
+                })
+            except Exception:                                        # noqa: BLE001
+                pass          # a viewer must never break a scored run
         trace.append({"t": round(t, 2), "top": d.top, "p": round(d.top_p, 3),
                       # `declared` and `abstained` MUST be here. verify/verifier.py keys on
                       # them: without `declared` it falls back to argmax, discarding the

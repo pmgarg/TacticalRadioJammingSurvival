@@ -901,7 +901,28 @@ main(int argc, char* argv[])
                                  "ControlMode",
                                  StringValue("HtMcs0"));
     WifiMacHelper mac;
-    mac.SetType("ns3::AdhocWifiMac");
+    // DISABLE A-MPDU AGGREGATION.
+    //
+    // Without this, a channel hop can abort the entire simulation:
+    //
+    //   aborted. cond="!htCapabilities",
+    //   msg="HT Capabilities element not received for 00:00:00:00:00:05",
+    //   +21.002134784s  src/wifi/model/mpdu-aggregator.cc, line=180
+    //
+    // In 802.11n ad-hoc mode a station learns each peer's HT Capabilities from frames it
+    // receives. After the agent retunes the PHY, that record no longer applies, and the
+    // first attempt to A-MPDU-aggregate to such a peer hits NS_ABORT_MSG_IF and kills the
+    // process -- mid-episode, with no result. `hop_channel` is the agent's single most
+    // important remedy, so this made the most interesting scenarios the least reliable.
+    //
+    // Aggregation buys throughput we are not measuring: every statistic here is about
+    // per-frame delivery, timing and spectrum. Setting the A-MPDU limit to 0 takes the
+    // aggregator out of the path entirely and costs the experiment nothing.
+    mac.SetType("ns3::AdhocWifiMac",
+                "BE_MaxAmpduSize", UintegerValue(0),
+                "BK_MaxAmpduSize", UintegerValue(0),
+                "VI_MaxAmpduSize", UintegerValue(0),
+                "VO_MaxAmpduSize", UintegerValue(0));
     NetDeviceContainer devs = wifi.Install(phy, mac, nodes);
 
     for (int i = 0; i < N; ++i)

@@ -1,0 +1,78 @@
+{
+ "version": "v1",
+ "provenance": "claude-cli induction, held-out validated",
+ "rules": [
+  {
+   "id": "barrage_wideband_evidence",
+   "clauses": [
+    [
+     "noise_delta_base",
+     ">=",
+     0.8
+    ],
+    [
+     "energy_no_preamble",
+     ">=",
+     0.5
+    ],
+    [
+     "tx_shadow_loss_delta",
+     "<=",
+     0.1
+    ],
+    [
+     "scan_noise_spread",
+     "<=",
+     0.2
+    ],
+    [
+     "scan_periodicity",
+     "<=",
+     0.2
+    ]
+   ],
+   "then": {
+    "hypothesis": "barrage"
+   },
+   "note": "Noise floor and energy-without-preamble are up uniformly across nearly all channels (low scan spread) and are not explained by our own traffic's self-shadow loss - a broadband emitter, not congestion.",
+   "support": 22,
+   "precision": 1.0
+  },
+  {
+   "id": "spot_narrowband_evidence",
+   "clauses": [
+    [
+     "noise_delta_base",
+     ">=",
+     0.8
+    ],
+    [
+     "scan_noise_spread",
+     ">=",
+     0.4
+    ],
+    [
+     "scan_bad_frac",
+     "<=",
+     0.8
+    ],
+    [
+     "tx_shadow_loss_delta",
+     "<=",
+     0.1
+    ],
+    [
+     "scan_periodicity",
+     "<=",
+     0.2
+    ]
+   ],
+   "then": {
+    "hypothesis": "spot"
+   },
+   "note": "Noise rises sharply on a minority of channels (high spread, not full-band) with no self-collision explanation - a single/narrowband jammer.",
+   "support": 19,
+   "precision": 0.9473684210526315
+  }
+ ]
+}

@@ -162,6 +162,23 @@ def render_panel(f: list[float], ctx: Context, reg: ToolRegistry,
         head.append(f"tests already run:     {', '.join(ctx.tests_run)}")
     if ctx.actions_taken:
         head.append(f"actions already taken: {', '.join(ctx.actions_taken)}")
+    # WHAT YOU TRIED AND WHAT IT DID. A remedy that did not help is evidence against the
+    # hypothesis that motivated it -- often the strongest evidence available, because it
+    # is causal rather than correlational. Hopping and staying broken argues against spot
+    # jamming far more sharply than any single statistic. Without this block the agent
+    # re-derives the same wrong answer from the same panel every tick.
+    if ctx.recovery_attempts:
+        head.append("")
+        head.append("WHAT YOU ALREADY TRIED, AND WHAT HAPPENED")
+        for a in ctx.recovery_attempts[-5:]:
+            head.append(
+                f"  t={a.get('t', 0):.0f}s  {a.get('call', '?'):<18} "
+                f"(you believed {a.get('believed', '?')})  ->  "
+                f"{a.get('outcome', '?')} ({a.get('delta_pct', 0):+.0f} pts delivery)")
+        head.append("  A remedy that did not help is evidence AGAINST the cause that "
+                    "motivated it. Do not repeat it; revise the diagnosis instead.")
+    if ctx.hypothesis_history and len(ctx.hypothesis_history) > 1:
+        head.append(f"  your hypothesis so far: {' -> '.join(ctx.hypothesis_history[-6:])}")
     head.append("")
     head.append(reg.render_catalogue(ctx.available))
     head.append("")

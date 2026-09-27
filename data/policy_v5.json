@@ -1,0 +1,68 @@
+{
+ "version": "v1",
+ "provenance": "claude-cli induction, held-out validated",
+ "rules": [
+  {
+   "id": "barrage_wideband_evidence",
+   "clauses": [
+    [
+     "noise_delta_base",
+     ">=",
+     0.8
+    ],
+    [
+     "energy_no_preamble",
+     ">=",
+     0.5
+    ],
+    [
+     "tx_shadow_loss_delta",
+     "<=",
+     0.1
+    ],
+    [
+     "scan_noise_spread",
+     "<=",
+     0.2
+    ],
+    [
+     "scan_periodicity",
+     "<=",
+     0.2
+    ]
+   ],
+   "then": {
+    "hypothesis": "barrage"
+   },
+   "note": "Noise floor and energy-without-preamble are up uniformly across nearly all channels (low scan spread) and are not explained by our own traffic's self-shadow loss - a broadband emitter, not congestion.",
+   "support": 22,
+   "precision": 1.0
+  },
+  {
+   "id": "sweep_periodic_scan",
+   "clauses": [
+    [
+     "scan_periodicity",
+     ">=",
+     0.5
+    ],
+    [
+     "scan_bad_frac",
+     ">=",
+     -0.2
+    ],
+    [
+     "tx_shadow_loss_delta",
+     "<=",
+     0.1
+    ]
+   ],
+   "then": {
+    "hypothesis": "sweep"
+   },
+   "note": "A recurring, periodic pattern of channels going bad across scans (not a one-off) with no self-collision explanation indicates a jammer stepping through the band.",
+   "support": 8,
+   "precision": 1.0
+  }
+ ]
+}
