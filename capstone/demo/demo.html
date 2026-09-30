@@ -1,0 +1,572 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jamming Survival — live</title>
+<style>
+:root{color-scheme:dark;
+ --bg:#111110;--surface-1:#1a1a19;--surface-2:#222221;--line:#34332f;
+ --text-primary:#fff;--text-secondary:#c3c2b7;--text-muted:#8a8980;
+ --s1:#3987e5;--s2:#d95926;--s7:#9085e9;
+ --good:#0ca30c;--warning:#fab219;--serious:#ec835a;--critical:#d03b3b;
+ --q100:#cde2fb;--q300:#6da7ec;--q450:#2a78d6;--q600:#184f95;--q700:#0d366b;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text-primary);
+ font:14px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px}
+h1{font-size:19px;margin:0 0 2px}
+.sub{color:var(--text-secondary);font-size:13px;margin-bottom:14px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+select,button{background:var(--surface-2);color:var(--text-primary);
+ border:1px solid var(--line);border-radius:7px;padding:8px 12px;font-size:14px}
+button{cursor:pointer;font-weight:600}
+button.go{background:var(--s1);border-color:var(--s1)}
+button:disabled{opacity:.45;cursor:default}
+.grid{display:grid;grid-template-columns:1.15fr 1fr;gap:14px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--surface-1);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card h2{font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+ color:var(--text-muted);margin:0 0 12px;font-weight:600}
+.hero{display:flex;gap:26px;align-items:baseline;margin-bottom:6px}
+.big{font-size:40px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.big .u{font-size:16px;color:var(--text-secondary);font-weight:400;margin-left:3px}
+.lbl{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;
+ font-size:12px;font-weight:600;border:1px solid}
+.row{display:grid;grid-template-columns:104px 1fr 54px;gap:9px;align-items:center;margin-bottom:5px}
+.row .n{font-size:12px;color:var(--text-secondary);text-align:right}
+.row .v{font-size:12px;color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.track{height:13px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.fill{height:100%;border-radius:0 4px 4px 0;transition:width .25s}
+#log{height:190px;overflow-y:auto;font:12px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace}
+#log div{padding:2px 0;border-bottom:1px solid var(--line)}
+.t{color:var(--text-muted)}.act{color:var(--warning);font-weight:600}
+.dg{color:var(--s7)}.ok{color:var(--good);font-weight:600}
+svg{width:100%;display:block}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary);margin-top:9px}
+.key{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{text-align:left;padding:3px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--text-muted);font-weight:600}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+</style></head><body>
+<h1>Jamming Survival — live ns-3 episode</h1>
+<div class="sub">The simulator, the agent's belief and the recovery, all moving together.</div>
+
+<div class="bar">
+  <select id="sc"></select>
+  <select id="ag">
+    <option value="teacher">Teacher — live LLM</option>
+    <option value="student">Student — on-device, no LLM</option>
+    <option value="baseline">Baseline — fixed rules</option>
+  </select>
+  <button class="go" id="run">▶ Run episode</button>
+  <span id="status" class="chip" style="border-color:var(--line);color:var(--text-secondary)">idle</span>
+</div>
+
+<div class="card" style="margin-bottom:14px;padding:11px 14px">
+  <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+    <div><span class="lbl">Stage</span>
+      <div id="phase" style="font-size:15px;font-weight:600">idle</div></div>
+    <div><span class="lbl">Wall clock</span>
+      <div id="wall" style="font-size:15px;font-variant-numeric:tabular-nums">0s</div></div>
+    <div><span class="lbl">ns-3 state msgs</span>
+      <div id="nstate" style="font-size:15px;font-variant-numeric:tabular-nums">0</div></div>
+    <div><span class="lbl">Teacher calls</span>
+      <div id="ncalls" style="font-size:15px;font-variant-numeric:tabular-nums">0</div></div>
+    <div><span class="lbl">Model vs cache</span>
+      <div id="cache" style="font-size:15px;font-variant-numeric:tabular-nums">—</div></div>
+    <div id="waitbox" style="display:none;flex:1;min-width:230px">
+      <span class="lbl">Waiting on</span>
+      <div style="font-size:14px;color:var(--warning);font-weight:600" id="waitwhat">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid">
+  <div>
+    <div class="card" style="margin-bottom:14px">
+      <h2>Mesh topology — live</h2>
+      <svg id="topo" viewBox="0 0 560 340" height="340"></svg>
+      <div class="legend">
+        <span><span class="key" style="background:var(--good)"></span>link healthy</span>
+        <span><span class="key" style="background:var(--warning)"></span>degraded</span>
+        <span><span class="key" style="background:var(--critical)"></span>down</span>
+        <span><span class="key" style="background:var(--s7)"></span>jammer</span>
+        <span style="color:var(--text-muted)">dots = packets in flight</span>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h2>Link health</h2>
+      <div class="hero">
+        <div><div class="lbl">Delivery</div><div class="big" id="pdr">—<span class="u">%</span></div></div>
+        <div><div class="lbl">Sim time</div><div class="big" id="tt">—<span class="u">s</span></div></div>
+        <div><div class="lbl">Channel</div><div class="big" id="ch">—</div></div>
+      </div>
+      <svg id="pdrPlot" viewBox="0 0 560 120" preserveAspectRatio="none" height="120"></svg>
+      <div class="legend"><span><span class="key" style="background:var(--s1)"></span>delivery ratio</span>
+      <span><span class="key" style="background:var(--warning)"></span>agent acted</span>
+      <span><span class="key" style="background:var(--critical)"></span>attack onset</span></div>
+    </div>
+    <div class="card">
+      <h2>Spectrum — energy per channel</h2>
+      <div id="band"></div>
+      <div class="legend"><span><span class="key" style="background:var(--critical)"></span>our channel</span>
+      <span><span class="key" style="background:var(--q450)"></span>other channels</span>
+      <span style="color:var(--text-muted)">darker = more energy</span></div>
+    </div>
+  </div>
+  <div>
+    <div class="card" style="margin-bottom:14px">
+      <h2>What the agent believes</h2>
+      <div id="belief"></div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h2>Episode story — what happened, in order</h2>
+      <div id="story" style="font-size:13px;line-height:1.75">
+        <span style="color:var(--text-muted)">press RUN</span></div>
+      <div id="verdict" style="display:none;margin-top:12px;padding:11px 13px;
+           border-radius:9px;border:1px solid var(--line);background:var(--surface-2)"></div>
+    </div>
+    <div class="card">
+      <h2>Decisions</h2>
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <h2>ns-3 simulator log — live stdout</h2>
+  <div id="ns3log" style="height:190px;overflow-y:auto;font:11.5px/1.6 ui-monospace,
+       SFMono-Regular,Menlo,monospace;color:var(--text-secondary)">
+    <span style="color:var(--text-muted)">the simulator prints here as it runs</span></div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <h2>Tick table</h2>
+  <div style="max-height:200px;overflow:auto">
+  <table><thead><tr><th>t (s)</th><th class="num">delivery</th><th>channel</th>
+  <th>belief</th><th class="num">p</th><th>call</th></tr></thead><tbody id="tbl"></tbody></table></div>
+</div>
+
+<script>
+const CAUSES=["barrage","spot","reactive","sweep","fading","node_loss","congestion","hidden_term"];
+const $=id=>document.getElementById(id);
+let hist=[],acts=[],onset=null,topo=null,live={},pkts=[],raf=null,jamOn=false;
+
+function loadTopo(){
+  fetch('/api/topology?scenario='+encodeURIComponent($('sc').value))
+    .then(r=>r.json()).then(d=>{if(!d.error){topo=d;live={};pkts=[];jamOn=false;drawTopo();}});
+}
+// Screen coords: scenario positions are metres, y grows north; SVG y grows down.
+function proj(){
+  const pts=topo.nodes.map(n=>n.pos).concat(topo.jammers.map(j=>j.pos));
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const W=560,H=340,M=46;
+  const sx=(x1-x0)||1, sy=(y1-y0)||1, k=Math.min((W-2*M)/sx,(H-2*M)/sy);
+  return p=>[M+(p[0]-x0)*k+((W-2*M)-sx*k)/2, H-M-((p[1]-y0)*k+((H-2*M)-sy*k)/2)];
+}
+function linkColour(pdr){
+  if(pdr===undefined||pdr===null) return 'var(--line)';
+  if(pdr>=0.85) return 'var(--good)';
+  if(pdr>=0.35) return 'var(--warning)';
+  return 'var(--critical)';
+}
+function drawTopo(){
+  if(!topo){$('topo').innerHTML='';return;}
+  const P=proj(), n=topo.nodes, agent=n.find(x=>x.role==='agent')||n[0];
+  const A=P(agent.pos);
+  let g='';
+  // edges: agent -> every peer, coloured by that peer's own delivery
+  n.forEach((nd,i)=>{
+    if(nd===agent) return;
+    const B=P(nd.pos), pdr=live.link_pdr?live.link_pdr[i-1]:undefined;
+    const dead=live.link_hb&&live.link_hb[i-1]>4.0;
+    g+=`<line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}"
+        stroke="${dead?'var(--line)':linkColour(pdr)}" stroke-width="${dead?1.5:2}"
+        ${dead?'stroke-dasharray="5 4"':''} opacity="${dead?.5:.9}"/>`;
+  });
+  // jammer: a soft ring set that only appears once it has fired
+  topo.jammers.forEach(j=>{
+    const J=P(j.pos);
+    if(jamOn){
+      for(let r=16;r<=46;r+=15)
+        g+=`<circle cx="${J[0]}" cy="${J[1]}" r="${r}" fill="none" stroke="var(--s7)"
+            stroke-width="1.5" opacity="${(50-r)/90}"/>`;
+    }
+    g+=`<path d="M${J[0]} ${J[1]-11} L${J[0]+10} ${J[1]+8} L${J[0]-10} ${J[1]+8} Z"
+        fill="${jamOn?'var(--s7)':'var(--surface-2)'}" stroke="var(--s7)" stroke-width="2"/>
+        <text x="${J[0]}" y="${J[1]+24}" text-anchor="middle" font-size="10"
+        fill="var(--text-secondary)">${j.type}${jamOn?' ACTIVE':''}</text>`;
+  });
+  // packets in flight
+  pkts.forEach(k=>{
+    const a=P(k.a),b=P(k.b),x=a[0]+(b[0]-a[0])*k.u,y=a[1]+(b[1]-a[1])*k.u;
+    g+=`<circle cx="${x}" cy="${y}" r="3.5" fill="${k.lost?'var(--critical)':'var(--s1)'}"
+        opacity="${k.lost?.9:.95}"/>`;
+  });
+  // nodes on top
+  n.forEach((nd,i)=>{
+    const B=P(nd.pos), me=nd===agent;
+    const dead=live.link_hb&&i>0&&live.link_hb[i-1]>4.0;
+    g+=`<circle cx="${B[0]}" cy="${B[1]}" r="${me?13:10}"
+        fill="${me?'var(--s1)':(dead?'var(--surface-2)':'var(--surface-1)')}"
+        stroke="${me?'var(--s1)':(dead?'var(--critical)':'var(--text-secondary)')}"
+        stroke-width="${me?3:2}"/>
+        <text x="${B[0]}" y="${B[1]+4}" text-anchor="middle" font-size="9"
+        font-weight="600" fill="${me?'#fff':'var(--text-secondary)'}">${nd.id}</text>`;
+    if(me) g+=`<text x="${B[0]}" y="${B[1]-19}" text-anchor="middle" font-size="9"
+        fill="var(--s1)" font-weight="600">AGENT · ch ${live.channel??topo.channel}</text>`;
+  });
+  $('topo').innerHTML=g;
+}
+// One packet per flow per tick, its fate decided by that link's measured delivery.
+function spawnPkts(){
+  if(!topo) return;
+  const n=topo.nodes, agent=n.find(x=>x.role==='agent')||n[0];
+  n.forEach((nd,i)=>{
+    if(nd===agent||!live.link_pdr) return;
+    const pdr=live.link_pdr[i-1]; if(pdr===undefined) return;
+    if(Math.random()>0.55) return;
+    pkts.push({a:agent.pos,b:nd.pos,u:0,lost:Math.random()>Math.max(0,Math.min(1,pdr))});
+  });
+  if(pkts.length>70) pkts=pkts.slice(-70);
+}
+function animate(){
+  let moved=false;
+  pkts=pkts.filter(k=>{k.u+=0.035; if(k.lost&&k.u>0.55) return false; moved=true; return k.u<1;});
+  if(moved) drawTopo();
+  raf=requestAnimationFrame(animate);
+}
+if(!raf) raf=requestAnimationFrame(animate);
+
+fetch('/api/scenarios').then(r=>r.json()).then(d=>{
+  $('sc').innerHTML=d.scenarios.map(s=>`<option>${s}</option>`).join('');
+  loadTopo(); $('sc').onchange=loadTopo;
+  if(!d.ns3) setStatus('ns-3 binary not found','var(--critical)');
+});
+function setStatus(t,c){const e=$('status');e.textContent=t;e.style.color=c||'var(--text-secondary)';
+  e.style.borderColor=c||'var(--line)';}
+
+$('run').onclick=()=>{
+  hist=[];acts=[];onset=null;$('log').innerHTML='';$('tbl').innerHTML='';
+  $('run').disabled=true; setStatus('running…','var(--warning)');
+  $('ns3log').innerHTML='<span style="color:var(--text-muted)">waiting for ns-3…</span>';
+  $('cache').textContent='—'; $('cache').style.color='var(--text-primary)';
+  phase('requesting episode'); $('waitbox').style.display='none';
+  fetch(`/api/run?scenario=${encodeURIComponent($('sc').value)}&agent=${$('ag').value}`)
+    .then(r=>r.json()).then(d=>{if(d.error){setStatus(d.error,'var(--critical)');$('run').disabled=false;}});
+};
+
+const es=new EventSource('/api/stream');
+let t0=0,nState=0,nCalls=0,lastEvt=0,agentKind='',wallTimer=null,ended=true;
+
+function phase(p){$('phase').textContent=p;}
+function ensureRunning(kind){
+  // A page reloaded mid-episode never saw `start`: without this the wall clock sat at
+  // 0s, the status chip stayed wrong, and the run looked broken when it was fine.
+  if(t0===0&&(kind==='state'||kind==='tick')){
+    t0=Date.now(); ended=false;
+    if(!wallTimer) wallTimer=setInterval(tickWall,500);
+    setStatus('running (joined mid-episode)','var(--warning)');
+    $('run').disabled=true;
+  }
+}
+function tickWall(){
+  if(ended) return;
+  const s=Math.round((Date.now()-t0)/1000);
+  $('wall').textContent=s+'s';
+  // Watchdog: if the stream goes silent for a long time nothing will ever arrive to
+  // clear "running", so say so rather than leaving a stale chip on screen.
+  if((Date.now()-lastEvt)/1000>150){
+    ended=true; setStatus('stream stalled — restart the run','var(--critical)');
+    phase('no events for 45s'); $('run').disabled=false; $('waitbox').style.display='none';
+    return;
+  }
+  // Say what we are waiting FOR. Silence with no explanation is the thing that makes a
+  // recording unexplainable, so name the cause and show it growing.
+  const quiet=(Date.now()-lastEvt)/1000;
+  if(quiet>2.5){
+    $('waitbox').style.display='block';
+    if(agentKind==='teacher'&&nState>0)
+      $('waitwhat').textContent=`the LLM teacher is reasoning — ${Math.round(quiet)}s`+
+        ` (one real model call, typically 30–60s)`;
+    else if(nState===0)
+      $('waitwhat').textContent=`ns-3 is starting — ${Math.round(quiet)}s`;
+    else
+      $('waitwhat').textContent=`no new state for ${Math.round(quiet)}s`;
+  } else $('waitbox').style.display='none';
+}
+
+es.onmessage=e=>{const m=JSON.parse(e.data);
+  lastEvt=Date.now();
+  if(m.kind==='ping') return;        // liveness only; carries no episode state
+  ensureRunning(m.kind);
+  if(m.kind==='start'){
+    t0=Date.now();nState=0;nCalls=0;ended=false;agentKind=m.agent;
+    $('nstate').textContent='0';$('ncalls').textContent='0';
+    if(wallTimer) clearInterval(wallTimer);
+    wallTimer=setInterval(tickWall,500);
+    resetStory(m.truth);
+    log(`<span class="t">—</span> start <b>${m.scenario}</b> · ${m.agent}`);
+  }
+  else if(m.kind==='meter'){
+    // 30 "calls" in 6 seconds are replayed answers, not fresh reasoning. Say which.
+    const fresh=(m.calls||0), hits=(m.cache_hits||0);
+    $('cache').textContent=`${fresh} live / ${hits} cached`;
+    $('cache').style.color = (fresh===0&&hits>0) ? 'var(--warning)' : 'var(--text-primary)';
+  }
+  else if(m.kind==='simcrash'){
+    simCrashed=true;
+    setStatus('ns-3 ABORTED','var(--critical)');
+    $('verdict').style.display='block';
+    $('verdict').innerHTML=
+      '<div style="font-weight:700;color:var(--critical);margin-bottom:5px">'+
+      'THE SIMULATOR ABORTED — THIS EPISODE IS NOT A RESULT</div>'+
+      '<div style="color:var(--text-secondary);font-family:ui-monospace,monospace;'+
+      'font-size:12px">'+m.line.replace(/</g,'&lt;')+'</div>'+
+      '<div style="margin-top:8px;font-size:12px;color:var(--text-muted)">'+
+      'ns-3 stopped mid-episode, so the verdict below is computed on a truncated run. '+
+      'Do not read anything into it.</div>';
+    log(`<span style="color:var(--critical)">✗ ns-3 aborted: ${m.line.slice(0,90)}</span>`);
+  }
+  else if(m.kind==='ns3log'){
+    const box=$('ns3log');
+    if(box.firstChild&&box.firstChild.nodeName==='SPAN') box.innerHTML='';
+    const d=document.createElement('div'); d.textContent=m.line; box.appendChild(d);
+    while(box.childNodes.length>400) box.removeChild(box.firstChild);
+    box.scrollTop=box.scrollHeight;          // follow the tail, like tail -f
+  }
+  else if(m.kind==='phase'){phase(m.phase);log(`<span class="t">·</span> ${m.phase}`);}
+  else if(m.kind==='health'){
+    setStatus('MODEL UNREACHABLE','var(--critical)');
+    $('verdict').style.display='block';
+    $('verdict').innerHTML=
+      '<div style="font-weight:700;color:var(--critical);margin-bottom:5px">'+
+      'THE TEACHER IS NOT REASONING</div>'+
+      '<div style="color:var(--text-secondary)">'+m.message+'</div>'+
+      '<div style="margin-top:8px;font-size:12px;color:var(--text-muted)">'+
+      'Every belief you see is the uniform 1/8 prior, not a diagnosis. '+
+      'Run <b>claude login</b> in your terminal, then restart this server.</div>';
+    log(`<span style="color:var(--critical)">⚠ ${m.message}</span>`);
+  }
+  else if(m.kind==='state'){
+    nState++;$('nstate').textContent=nState;
+    stateTick(m); storyState(m);
+    phase(m.warmup?`ns-3 running — warm-up (OLSR converging), t=${m.t.toFixed(1)}s`
+                  :(nCalls?`ns-3 running, agent deciding — t=${m.t.toFixed(1)}s`
+                          :`ns-3 running — waiting for first decision, t=${m.t.toFixed(1)}s`));
+  }
+  else if(m.kind==='tick'){nCalls++;$('ncalls').textContent=nCalls;tick(m);storyTick(m);}
+  else if(m.kind==='done'){ended=true;phase('episode complete');storyDone();
+    $('waitbox').style.display='none';
+    setStatus('✓ complete','var(--good)');$('run').disabled=false;
+    if(wallTimer){clearInterval(wallTimer);wallTimer=null;}
+    log(`<span class="ok">✓ episode complete</span>`);}
+  else if(m.kind==='error'){ended=true;phase('error');
+    $('waitbox').style.display='none';
+    setStatus('error','var(--critical)');$('run').disabled=false;
+    log(`<span style="color:var(--critical)">✗ ${m.message}</span>`);}
+};
+
+// A state message carries no belief and no decision -- it is the SIMULATOR's pulse.
+// It moves the clock, the topology and the packets, so the network is visibly alive
+// from t=0 even while the teacher is still thinking about its first answer.
+function stateTick(m){
+  const pct=Math.round(((m.pdr+1)/2)*100);
+  $('pdr').innerHTML=pct+'<span class="u">%</span>';
+  $('tt').innerHTML=m.t.toFixed(0)+'<span class="u">s</span>';
+  $('ch').textContent=m.channel;
+  if(onset===null&&m.onset_t!=null) onset=m.onset_t;
+  hist.push({t:m.t,p:pct});
+  live=Object.assign({},live,m);
+  if(topo&&topo.onset_t!=null&&m.t>=topo.onset_t) jamOn=true;
+  if(m.onset_t!=null) jamOn=true;
+  drawPdr(); spawnPkts(); drawTopo();
+}
+
+function tick(m){
+  const pct=Math.round(((m.pdr+1)/2)*100);
+  $('pdr').innerHTML=pct+'<span class="u">%</span>';
+  $('tt').innerHTML=m.t.toFixed(0)+'<span class="u">s</span>';
+  $('ch').textContent=m.channel;
+  if(onset===null&&m.onset_t!=null) onset=m.onset_t;
+  live=m; if(m.onset_t!=null) jamOn=true;
+  if(topo&&topo.onset_t!=null&&m.t>=topo.onset_t) jamOn=true;
+  spawnPkts(); drawTopo();
+  hist.push({t:m.t,p:pct});
+  const acted=m.call&&!['no_op'].includes(m.call);
+  if(acted) acts.push({t:m.t,call:m.call});
+  drawPdr(); drawBand(m); drawBelief(m);
+  if(acted){
+    const diag=['spectrum_scan','silent_listen','neighbor_probe','load_test','listen_test',
+                'transmit_probe','channel_hop_probe','mobility_test'].includes(m.call);
+    log(`<span class="t">t=${m.t.toFixed(0)}s</span> `+
+        `<span class="${diag?'dg':'act'}">${m.call}</span> · ${m.top} ${(m.p*100).toFixed(0)}%`);
+  }
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${m.t.toFixed(1)}</td><td class="num">${pct}%</td><td>${m.channel}</td>`+
+               `<td>${m.top||'—'}</td><td class="num">${(m.p*100).toFixed(0)}%</td><td>${m.call}</td>`;
+  $('tbl').prepend(tr);
+}
+function log(h){const d=document.createElement('div');d.innerHTML=h;$('log').prepend(d);}
+
+// ---- the episode story -------------------------------------------------------------
+// A viewer should not have to read four charts and infer the plot. This records the few
+// moments that actually matter and writes them out in order, so the recording explains
+// itself: when the attack started, when delivery fell, what the agent bought, what it
+// concluded, what it did, and whether the link came back.
+const DIAGS=['spectrum_scan','silent_listen','neighbor_probe','load_test','listen_test',
+             'transmit_probe','channel_hop_probe','mobility_test'];
+let story=[],seen={},basePdr=null,dropT=null,recovT=null,firstBelief=null,lastTop=null;
+let narrated=null,degraded=false,actedOnce=false,worstPct=null,simCrashed=false;
+let truth={};   // sent with `start`: the scenario actually running, not the dropdown
+
+function resetStory(t){
+  story=[];seen={};basePdr=null;dropT=null;recovT=null;firstBelief=null;lastTop=null;
+  narrated=null;degraded=false;actedOnce=false;worstPct=null;simCrashed=false;
+  truth=t||{};
+  $('story').innerHTML='<span style="color:var(--text-muted)">waiting for ns-3…</span>';
+  $('verdict').style.display='none';
+}
+function add(t,icon,colour,text){
+  story.push({t:t,icon:icon,colour:colour,text:text,n:story.length});
+  // sort by simulation time, ties broken by insertion, so the plot always reads forwards
+  const ordered=story.slice().sort((a,b)=>(a.t-b.t)||(a.n-b.n));
+  $('story').innerHTML=ordered.map(e=>
+    `<div style="display:flex;gap:9px;align-items:baseline">
+       <span style="color:var(--text-muted);font-variant-numeric:tabular-nums;
+             min-width:52px">t=${e.t.toFixed(0)}s</span>
+       <span style="color:${e.colour}">${e.icon}</span>
+       <span>${e.text}</span></div>`).join('');
+}
+function storyState(m){
+  const pct=Math.round(((m.pdr+1)/2)*100);
+  if(basePdr===null&&m.t>=5&&pct>=60){basePdr=pct;add(m.t,'●','var(--good)',
+     `mesh is up — delivery <b>${pct}%</b> on channel ${m.channel}`);}
+  const on=(truth.onset_t!=null)?truth.onset_t:(topo?topo.onset_t:null);
+  if(on!=null&&m.t>=on&&!seen.onset){
+    seen.onset=1;
+    const ch=truth.jammer_channels||[], nch=truth.n_channels||8;
+    if(truth.has_jammer){
+      add(on,'▲','var(--critical)',
+          `<b>attack begins</b> — ${truth.jammer_type||'—'} jammer, `+
+          (ch.length>=nch?'<b>all channels</b>'
+           :ch.length>1?`channels ${ch.join(', ')}`
+           :ch.length?`<b>channel ${ch[0]}</b> only`:'—'));
+    } else {
+      // congestion, node_loss and fading have no attacker at all
+      const what={load_spike:'traffic load spikes — no attacker',
+                  node_down:'a peer goes down — no attacker'}[truth.event_type]
+                 || 'the fault begins — no attacker';
+      add(on,'▲','var(--critical)',`<b>${what}</b>`);
+    }
+  }
+  if(basePdr!==null&&(worstPct===null||pct<worstPct)) worstPct=pct;
+  if(dropT===null&&basePdr!==null&&pct<=40){dropT=m.t;
+     add(m.t,'▼','var(--critical)',`delivery collapses to <b>${pct}%</b>`);}
+  // A fault that degrades without collapsing is still a fault. Congestion is the case:
+  // delivery sags from 100% to ~60% and never trips a collapse threshold.
+  else if(!degraded&&basePdr!==null&&pct<=basePdr-25){degraded=true;
+     add(m.t,'▼','var(--warning)',
+         `delivery <b>degrades</b> ${basePdr}% -> <b>${pct}%</b> (no collapse)`);}
+  if(dropT!==null&&recovT===null&&pct>=70){recovT=m.t;
+     add(m.t,'▲','var(--good)',`<b>link recovered</b> — delivery back to ${pct}% `+
+         `on channel ${m.channel}`);}
+}
+function storyTick(m){
+  if(firstBelief===null&&m.top){firstBelief=m.top;}
+  // Only narrate a diagnosis once there is something to diagnose. Before the anomaly
+  // gate fires the belief is just the prior wandering, and reporting it as a conclusion
+  // makes the agent look like it is guessing at a healthy link.
+  // Track the conclusion ALWAYS. Gating the tracking (not just the narration) on
+  // engagement meant the verdict said "agent said —" for any scenario whose fault never
+  // collapsed delivery — congestion is exactly that case.
+  if(m.top&&m.p>=0.5) lastTop=m.top;
+  const engaged=(seen.onset||dropT!==null||degraded||actedOnce);
+  if(engaged&&m.top&&m.top!==narrated&&m.p>=0.5){
+    narrated=m.top;
+    add(m.t,'◆','var(--s1)',`agent concludes <b>${m.top}</b> (${Math.round(m.p*100)}%)`);
+  }
+  if(DIAGS.includes(m.call)&&!seen['d'+m.call]){seen['d'+m.call]=1;
+    add(m.t,'?','var(--s7)',`buys evidence — <b>${m.call}</b> (costs budget)`);}
+  if(!DIAGS.includes(m.call)&&m.call!=='no_op'){
+    actedOnce=true;
+    add(m.t,'✦','var(--warning)',`<b>acts: ${m.call}</b>`+
+        (m.args&&Object.keys(m.args).length?` ${JSON.stringify(m.args)}`:''));
+  }
+}
+function storyDone(){
+  if(simCrashed) return;      // the crash banner is the honest verdict
+  const jt=(topo&&topo.jammers[0])||{};
+  let head,colour,body;
+  if(recovT!==null){
+    head='RECOVERED'; colour='var(--good)';
+    body=`The agent diagnosed <b>${lastTop||'—'}</b> and restored the link `+
+         `${(recovT-(dropT??recovT)).toFixed(0)}s after delivery collapsed.`;
+  } else if(dropT!==null){
+    head='LINK NOT RECOVERED'; colour='var(--warning)';
+    body=`The agent diagnosed <b>${lastTop||'—'}</b>. Delivery did not come back. `+
+         (lastTop==='barrage'
+           ? 'That is the <b>correct</b> outcome for barrage: every channel is jammed, '+
+             'so there is nowhere to hop to. Hopping here would spend the budget and '+
+             'fix nothing — the remaining options are a different waveform or declaring '+
+             'the link lost.'
+           : 'Either the remedy did not work, or the cause was misread.');
+  } else if(degraded){
+    head='DEGRADED, NOT RECOVERED'; colour='var(--warning)';
+    body=`Delivery sagged from ${basePdr}% to ${worstPct}% without ever collapsing. `+
+         `The agent diagnosed <b>${lastTop||'—'}</b>. A partial degradation is the `+
+         `hardest case: the link still works, so an aggressive remedy costs more than `+
+         `it saves, but doing nothing leaves throughput on the floor.`;
+  } else {
+    head='NO FAULT'; colour='var(--good)';
+    body='Delivery never collapsed. If the agent took no costly action, that is the '+
+         'right answer — a false alarm costs a hop and a second of link time.';
+  }
+  const tc=truth.family||(topo&&topo.family)||'—';
+  const right=(lastTop===tc);
+  $('verdict').style.display='block';
+  $('verdict').innerHTML=
+    `<div style="font-weight:700;color:${colour};margin-bottom:5px">${head}</div>`+
+    `<div style="color:var(--text-secondary)">${body}</div>`+
+    `<div style="margin-top:8px;font-size:12px">true cause <b>${tc}</b> · `+
+    `agent said <b>${lastTop||'—'}</b> · `+
+    `<span style="color:${right?'var(--good)':'var(--critical)'};font-weight:600">`+
+    `${right?'CORRECT':'WRONG'}</span></div>`;
+}
+
+function drawPdr(){
+  const W=560,H=120,P=6;
+  if(hist.length<2){$('pdrPlot').innerHTML='';return;}
+  const t0=hist[0].t,t1=Math.max(hist[hist.length-1].t,t0+1);
+  const X=t=>P+(t-t0)/(t1-t0)*(W-2*P), Y=p=>H-P-(p/100)*(H-2*P);
+  let g='';for(let p=0;p<=100;p+=50)g+=`<line x1="0" y1="${Y(p)}" x2="${W}" y2="${Y(p)}" stroke="var(--line)" stroke-width="1"/>`;
+  const d=hist.map((h,i)=>`${i?'L':'M'}${X(h.t).toFixed(1)},${Y(h.p).toFixed(1)}`).join(' ');
+  let mk=onset!=null?`<line x1="${X(onset)}" y1="0" x2="${X(onset)}" y2="${H}" stroke="var(--critical)" stroke-width="2" stroke-dasharray="4 3"/>`:'';
+  acts.forEach(a=>{mk+=`<line x1="${X(a.t)}" y1="0" x2="${X(a.t)}" y2="${H}" stroke="var(--warning)" stroke-width="2" opacity=".65"/>`;});
+  const last=hist[hist.length-1];
+  $('pdrPlot').innerHTML=g+mk+`<path d="${d}" fill="none" stroke="var(--s1)" stroke-width="2"
+    stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${X(last.t)}" cy="${Y(last.p)}" r="4.5" fill="var(--s1)" stroke="var(--surface-1)" stroke-width="2"/>`;
+}
+function drawBand(m){
+  const b=m.band||[];if(!b.length){$('band').innerHTML='<div style="color:var(--text-muted);font-size:12px">scan not yet paid for</div>';return;}
+  const lo=Math.min(...b),hi=Math.max(...b),rng=(hi-lo)||1;
+  const steps=['var(--q100)','var(--q300)','var(--q450)','var(--q600)','var(--q700)'];
+  $('band').innerHTML=b.map((v,i)=>{
+    const f=(v-lo)/rng, w=Math.max(3,f*100), cur=i===m.channel;
+    const col=cur?'var(--critical)':steps[Math.min(4,Math.round((1-f)*4))];
+    return `<div class="row"><div class="n">ch ${i}${cur?' ◀ ours':''}</div>
+      <div class="track"><div class="fill" style="width:${w}%;background:${col}"></div></div>
+      <div class="v">${v.toFixed(0)}</div></div>`;}).join('');
+}
+function drawBelief(m){
+  const b=m.belief||{};
+  const rows=CAUSES.map(c=>[c,b[c]||0]).sort((x,y)=>y[1]-x[1]);
+  $('belief').innerHTML=rows.map(([c,p])=>{
+    const top=c===m.top;
+    return `<div class="row"><div class="n" style="${top?'color:var(--text-primary);font-weight:600':''}">${c}</div>
+      <div class="track"><div class="fill" style="width:${(p*100).toFixed(0)}%;
+        background:${top?'var(--s1)':'var(--q600)'}"></div></div>
+      <div class="v">${(p*100).toFixed(0)}%</div></div>`;}).join('');
+}
+</script></body></html>

@@ -29,11 +29,11 @@ SCEN_DIR = os.path.join(HERE, "..", "scenarios")
 def _default_bundle() -> str:
     """Newest student that is actually present. v11 is the one calibrated on live-bridge
     rows (abstain 0.51); v10 shipped with abstain 0.0, meaning it never abstained."""
-    for v in ("student_v11", "student_v10", "student_v9"):
+    for v in ("student_v12", "student_v11", "student_v10", "student_v9"):
         p_ = os.path.join(HERE, "..", "data", v, "student_bundle.json")
         if os.path.exists(p_):
             return p_
-    return os.path.join(HERE, "..", "data", "student_v11", "student_bundle.json")
+    return os.path.join(HERE, "..", "data", "student_v12", "student_bundle.json")
 
 
 BUNDLE = os.environ.get("STUDENT_BUNDLE", _default_bundle())

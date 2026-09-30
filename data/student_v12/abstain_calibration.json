@@ -1,0 +1,15 @@
+{
+ "calib": "../data/traces_bridge/train.jsonl",
+ "n_calib": 4584,
+ "calib_accuracy": 0.7718150087260035,
+ "target_err": 0.1,
+ "threshold": 0.48,
+ "retained_frac": 0.7452006980802792,
+ "retained_err": 0.0954332552693209,
+ "ood": "../data/traces_ns3_v3/test.jsonl",
+ "abstain_in_dist": 0.004547176960970065,
+ "abstain_held_out": 0.0,
+ "acc_in_dist": 0.9143615005683972,
+ "acc_held_out": 0.9476248477466505,
+ "detects_novelty": false
+}
