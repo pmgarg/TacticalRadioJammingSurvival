@@ -117,8 +117,59 @@ def make(family: str, seed: int) -> Scenario:
                                        start_s=onset, type="burst"))
         sc.events = [Event(onset, "load_spike", None, {"factor": rng.uniform(8, 16)})]
     elif family == "hidden_term":
+        # ROBUSTNESS (capstone): the "hidden" load_spike event above is a REFSIM-ONLY
+        # mechanism (sim/refsim.py sets self.hidden from it) -- ns-3's event dispatch in
+        # jamming-sim.cc has no case for "load_spike" at all, so in the authoritative
+        # world this scenario previously had NO onset mechanism whatsoever: nothing ever
+        # happened, despite truth.cause=hidden_term. validate() only checks refsim, so
+        # this passed corpus validation while being silently inert in ns-3 -- confirmed
+        # live: a real corpus episode's pdr_fast sat flat from well before to well after
+        # its own onset_t, no transition anywhere.
+        #
+        # First attempt added two new transmitter nodes positioned for the textbook
+        # hidden-terminal geometry (verified correct: below ns-3's -82dBm CcaSensitivity
+        # from each other, above it to the agent). That broke something else: every node
+        # gets an unconditional TDMA slot (i % tdmaSlots) with no way to opt a node out
+        # from the scenario side, so 6 nodes -> 8 nodes turned "one shared slot" into
+        # "every slot shared", degrading the PRE-onset baseline too (confirmed live: raw
+        # pdr already ~0.2 from t=1, not the healthy-then-degrades shape the family needs).
+        # Fixing that right needs a jamming-sim.cc change (skip SetTdma for a node role
+        # ns-3 doesn't act on today) -- deferred; this version stays scenario-only.
+        #
+        # Scenario-only fix: search the EXISTING peers (no new nodes, no TDMA impact,
+        # zero C++) for a pair that already satisfies the hidden-terminal geometry --
+        # both within comm range of the agent, and mutually further apart than comm
+        # range (below CcaSensitivity from each other at ns-3's default path loss).
+        # Not every random topology has such a pair (some cluster all peers close
+        # together); where none exists this family stays inert in ns-3, same as before,
+        # rather than forcing a fake pair that wouldn't actually be RF-hidden.
+        agent_pos = nodes[0].pos
+        peers = nodes[1:]
+        best = None
+        for i in range(len(peers)):
+            for j in range(i + 1, len(peers)):
+                p, q = peers[i], peers[j]
+                d_ap = math.dist(agent_pos, p.pos)
+                d_aq = math.dist(agent_pos, q.pos)
+                d_pq = math.dist(p.pos, q.pos)
+                if d_ap <= comm and d_aq <= comm and d_pq > comm:
+                    margin = d_pq - comm
+                    if best is None or margin > best[0]:
+                        best = (margin, p, q)
+        # The event is drawn BEFORE the flow rate on purpose: the rate draw below only
+        # happens for seeds where a pair exists, and drawing it first would shift the RNG
+        # stream and change this event's `factor` for exactly those seeds -- altering the
+        # refsim data of existing seeds. This order keeps every field except the two
+        # added flows identical to the pre-fix scenario.
         sc.events = [Event(onset, "load_spike", None,
                            {"factor": rng.uniform(6, 12), "hidden": True})]
+        if best is not None:
+            _, h1, h2 = best
+            rate = rng.uniform(1200, 2000)
+            sc.traffic.append(Flow(src=h1.id, dst=nodes[0].id, rate_kbps=rate,
+                                   start_s=onset, type="cbr"))
+            sc.traffic.append(Flow(src=h2.id, dst=nodes[0].id, rate_kbps=rate,
+                                   start_s=onset, type="cbr"))
     elif family == "refusal":
         sc.lora_jammed = True
         sc.jammers = [
