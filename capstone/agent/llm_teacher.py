@@ -21,11 +21,6 @@ from .api import Agent, Context, Decision, CAUSES, normalise
 from gateway.provider import ClaudeCliProvider, extract_json, LlmError
 from percept.features import FEATURE_NAMES
 
-DIAG = ["spectrum_scan", "silent_listen", "neighbor_probe", "load_test",
-        "listen_test", "transmit_probe", "channel_hop_probe", "mobility_test"]
-ACTS = ["no_op", "set_tx_power", "reroute", "change_tdma_slot", "hop_channel",
-        "fallback_to_lora", "move", "declare_link_lost"]
-
 # Which features to show, and how to describe them. Showing all 56 raw floats buries the
 # signal; these are the ones the physics says carry the diagnosis (DESIGN §7.4 + TELEMETRY).
 PANEL = [
@@ -90,8 +85,6 @@ DIAGNOSTIC TESTS (cost in brackets) - these buy information:
   silent_listen[2] stop transmitting, re-measure: confirms REACTIVE
   neighbor_probe[2] is a specific peer alive on any channel: confirms NODE_LOSS
   load_test[2]     drop our own load: confirms CONGESTION
-  listen_test[2]   a neighbour transmits while we listen: our RX vs the channel
-  transmit_probe[2] we transmit, neighbour reports: our TX vs the channel
   channel_hop_probe[4] recover on a clean channel, or prove none exists
   mobility_test[8] move ~30 m: confirms FADING vs a fixed attacker
 
