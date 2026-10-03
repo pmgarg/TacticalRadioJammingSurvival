@@ -34,6 +34,24 @@ else
     || echo "   (patch reported an issue -- check manually; a partial CSV proves nothing)"
 fi
 
+say "0b. reactive-jammer PHY robustness patch"
+# Without it ns-3 aborts mid-episode under a reactive jammer: the jammer's burst races
+# the PHY receive state machine and leaves a stale receive event (NS_ASSERT in
+# src/wifi/model/phy-entity.cc). This is what made reactive_on_tx below exit 134.
+# v1 of the patch cleared the stale event but not its end-of-reception timer, which
+# just moved the abort to the next assert -- the v2 marker is what is checked here.
+PHY_CC="$NS3_DIR/src/wifi/model/phy-entity.cc"
+if grep -q "v2: the stale event" "$PHY_CC" 2>/dev/null; then
+  echo "   looks applied (v2)"
+elif grep -q "ROBUSTNESS PATCH (capstone)" "$PHY_CC" 2>/dev/null; then
+  echo "   v1 is applied but not v2. Restore the original phy-entity.cc from your ns-3"
+  echo "   source, then rerun: v2 (sim_ns3/ns3-reactive-phy-robustness.patch) applies to pristine ns-3."
+else
+  echo "   NOT detected. Applying sim_ns3/ns3-reactive-phy-robustness.patch ..."
+  ( cd "$NS3_DIR" && patch -p0 --forward < "$REPO/sim_ns3/ns3-reactive-phy-robustness.patch" ) \
+    || echo "   (patch reported an issue -- check manually; written against ns-3.48)"
+fi
+
 say "1. install sources into scratch/jamming/"
 # MUST be a subdirectory, not the scratch root. ns-3's scratch/CMakeLists.txt builds ONE
 # executable per directory, from every .cc in it, and fails hard if a directory contains a

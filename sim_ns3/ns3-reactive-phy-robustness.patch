@@ -1,0 +1,28 @@
+--- src/wifi/model/phy-entity.cc	2026-10-03 19:20:51.263047382 +0000
++++ src/wifi/model/phy-entity.cc	2026-10-03 19:20:51.263202982 +0000
+@@ -490,7 +490,24 @@
+         }
+         break;
+     case WifiPhyState::IDLE:
+-        NS_ASSERT(!m_wifiPhy->m_currentEvent);
++        if (m_wifiPhy->m_currentEvent)
++        {
++            // ROBUSTNESS PATCH (capstone): state is IDLE but m_currentEvent survived --
++            // a stale-event/state desync, reproducible under a reactive jammer whose
++            // WaveformGenerator Start()/Stop() pair races the PHY receive state machine
++            // on the same spectrum channel (jamming-sim.cc ReactiveTrigger). Upstream
++            // this NS_ASSERT aborts the whole simulation; clear the stale pointer and
++            // proceed instead -- same "refuse malformed state instead of UB" policy as
++            // this project's OLSR robustness patch.
++            //
++            // v2: the stale event's end-of-reception timer must go with it. Clearing only
++            // the pointer left m_endPhyRxEvent pending, and the next
++            // EndPreambleDetectionPeriod aborted on
++            // NS_ASSERT(m_wifiPhy->m_endPhyRxEvent.IsExpired()) instead (reactive_50000,
++            // +34.35 s, with v1 built in).
++            m_wifiPhy->m_endPhyRxEvent.Cancel();
++            m_wifiPhy->m_currentEvent = nullptr;
++        }
+         StartPreambleDetectionPeriod(event);
+         break;
+     case WifiPhyState::SLEEP:
